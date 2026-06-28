@@ -66,10 +66,11 @@ namespace AutoEquipment
             Text.Font = GameFont.Small;
             l.Gap();
 
-            // 当前角色（DEBUG 模式下附加战斗价值档次，如 王五[S]）
+            // 当前角色（DEBUG 模式下附加评级：系统档始终显示，自定义档写入括号）
+            // 格式：[S#王五]（无自定义）或 [S(A)#王五]（有自定义，A 为玩家指定档）
             Role role = comp.CurrentRole;
             string tierSuffix = AEDebug.IsActive
-                ? " [" + SidearmAllocator.GetCombatTier(pawn) + "]"
+                ? " [" + AEDebug.Label(pawn) + "]"
                 : "";
             l.Label("AE_CurrentRole".Translate() + ": " + ("AE_Role_" + role).Translate() + tierSuffix);
 
@@ -148,22 +149,16 @@ namespace AutoEquipment
             GUI.color = Color.white;
             Text.Font = GameFont.Small;
 
-            // 显示当前 Pawn 的自动评级与自定义评级（如有）
+            // 显示当前 Pawn 的识别码：系统档固定，自定义档写入括号
+            // 格式：S#王五（无自定义）或 S(A)#王五（有自定义）
             string pawnName = SidearmAllocator.GetPawnLookupName(pawn);
             CombatTier autoTier = SidearmAllocator.GetAutoCombatTier(pawn);
             bool hasCustom = AESettings.TryGetCustomTier(pawnName, out CombatTier customTier);
 
-            if (hasCustom)
-            {
-                // 命中自定义评级：显示识别码 [等级#名字] 与自动档对比
-                l.Label("AE_ReallocRules_CurrentTier".Translate() + ": " +
-                        customTier + "#" + pawnName + "  (" +
-                        "AE_ReallocRules_AutoTier".Translate() + ": " + autoTier + ")");
-            }
-            else
-            {
-                l.Label("AE_ReallocRules_CurrentTier".Translate() + ": " + autoTier);
-            }
+            string tierCode = hasCustom
+                ? autoTier + "(" + customTier + ")#" + pawnName
+                : autoTier + "#" + pawnName;
+            l.Label("AE_ReallocRules_CurrentTier".Translate() + ": " + tierCode);
 
             // 两按钮并排：设置自定义档次 / 清除自定义
             Rect tierBtnRect = l.GetRect(30f);
@@ -277,7 +272,9 @@ namespace AutoEquipment
             l.End();
 
             // 记录内容高度，供下次绘制使用
-            lastHeight = l.CurHeight + 20f;
+            // 用 Mathf.Max 防止切换开关（如 overrideRole）导致高度突然变小，
+            // 让 ScrollView 临时裁剪内容看起来"消失"。下一次绘制时会按真实高度撑开。
+            lastHeight = Mathf.Max(lastHeight, l.CurHeight + 20f);
 
             Widgets.EndScrollView();
 

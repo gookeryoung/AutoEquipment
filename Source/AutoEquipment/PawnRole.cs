@@ -147,13 +147,13 @@ namespace AutoEquipment
             {
                 if (prev != result)
                 {
-                    Log.Message($"[AutoEquipment] {pawn.LabelShort} 角色变化: {prev} -> {result} ({reason})");
+                    Log.Message($"[AutoEquipment] {AEDebug.Label(pawn)} 角色变化: {prev} -> {result} ({reason})");
                     lastLoggedRole[pawnId] = result;
                 }
             }
             else
             {
-                Log.Message($"[AutoEquipment] {pawn.LabelShort} 初始角色: {result} ({reason})");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(pawn)} 初始角色: {result} ({reason})");
                 lastLoggedRole[pawnId] = result;
             }
 

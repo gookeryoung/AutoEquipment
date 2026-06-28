@@ -19,10 +19,10 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 返回 Pawn 的标签字符串，DEBUG 模式下附加战斗价值档次。
-        /// 默认格式："王五[S]"
-        /// 自定义评级（玩家手动指定）："王五[S#王五]"
-        /// 自定义档次的 Pawn 直接按对应档次优先分配高价值装备，不再走公式计算。
+        /// 返回 Pawn 的标签字符串，DEBUG 模式下以"系统评级[#名字]"格式显示。
+        /// 系统评级始终显示；若玩家指定了自定义评级则写入括号中：
+        ///   无自定义：S#王五
+        ///   有自定义：S(A)#王五  （S 为系统档，A 为玩家指定档）
         /// 非 DEBUG 模式下返回原始 LabelShort，零开销。
         /// </summary>
         public static string Label(Pawn pawn)
@@ -30,14 +30,16 @@ namespace AutoEquipment
             if (pawn == null) return "null";
             if (!IsActive) return pawn.LabelShort;
 
-            CombatTier tier = SidearmAllocator.GetCombatTier(pawn);
+            // 系统评级始终固定显示
+            CombatTier autoTier = SidearmAllocator.GetAutoCombatTier(pawn);
             string name = SidearmAllocator.GetPawnLookupName(pawn);
-            // 命中自定义评级时显示完整识别码 [等级#名字]，否则仅显示 [等级]
-            if (AESettings.TryGetCustomTier(name, out _))
+
+            // 命中自定义评级时把自定义档写入括号
+            if (AESettings.TryGetCustomTier(name, out CombatTier customTier))
             {
-                return pawn.LabelShort + "[" + tier + "#" + name + "]";
+                return autoTier + "(" + customTier + ")#" + name;
             }
-            return pawn.LabelShort + "[" + tier + "]";
+            return autoTier + "#" + name;
         }
     }
 }

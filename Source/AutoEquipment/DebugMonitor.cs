@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 using AutoEquipment.Scoring;
 
@@ -54,7 +54,7 @@ namespace AutoEquipment
             float improvement = newScore - oldScore;
             float improvementPct = oldScore > 0 ? (improvement / oldScore * 100f) : 0f;
 
-            string msg = "[AE] " + pawn.LabelShort + " " + slot +
+            string msg = "[AE] " + AEDebug.Label(pawn) + " " + slot +
                          " 换下:" + oldLabel + " → 换上:" + newLabel +
                          " (" + newScore.ToString("F0") + " vs " + oldScore.ToString("F0") +
                          ", " + (improvement >= 0 ? "+" : "") + improvement.ToString("F0") +
@@ -76,7 +76,7 @@ namespace AutoEquipment
             // 明细报告
             if (monitorBreakdown)
             {
-                Log.Message(breakdown.BuildReport(pawn.LabelShort, candidate.LabelShort));
+                Log.Message(breakdown.BuildReport(AEDebug.Label(pawn), candidate.LabelShort));
             }
 
             // 对比报告
@@ -86,7 +86,7 @@ namespace AutoEquipment
                 float diff = candidateScore - currentScore;
                 float pct = currentScore > 0 ? (diff / currentScore * 100f) : 0f;
 
-                Log.Message($"[AutoEquipment] {pawn.LabelShort} 武器评分对比:\n" +
+                Log.Message($"[AutoEquipment] {AEDebug.Label(pawn)} 武器评分对比:\n" +
                             $"  候选 {candidate.LabelShort}: {candidateScore:+0.0;-0.0;0.0}\n" +
                             $"  当前 {currentGear.LabelShort}: {currentScore:+0.0;-0.0;0.0}\n" +
                             $"  差异: {(diff >= 0 ? "+" : "")}{diff:F0} ({(pct >= 0 ? "+" : "")}{pct:F1}%)");
@@ -106,7 +106,7 @@ namespace AutoEquipment
             // 明细报告
             if (monitorBreakdown)
             {
-                Log.Message(breakdown.BuildReport(pawn.LabelShort, candidate.LabelShort));
+                Log.Message(breakdown.BuildReport(AEDebug.Label(pawn), candidate.LabelShort));
             }
 
             // 对比报告
@@ -116,7 +116,7 @@ namespace AutoEquipment
                 float diff = candidateScore - currentScore;
                 float pct = currentScore > 0 ? (diff / currentScore * 100f) : 0f;
 
-                Log.Message($"[AutoEquipment] {pawn.LabelShort} 防具评分对比:\n" +
+                Log.Message($"[AutoEquipment] {AEDebug.Label(pawn)} 防具评分对比:\n" +
                             $"  候选 {candidate.LabelShort}: {candidateScore:+0.0;-0.0;0.0}\n" +
                             $"  当前 {currentGear.LabelShort}: {currentScore:+0.0;-0.0;0.0}\n" +
                             $"  差异: {(diff >= 0 ? "+" : "")}{diff:F0} ({(pct >= 0 ? "+" : "")}{pct:F1}%)");
