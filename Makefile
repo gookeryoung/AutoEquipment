@@ -9,7 +9,7 @@ OUTPUT := Assemblies/AutoEquipment.dll
 # .NET 命令
 DOTNET := dotnet
 
-.PHONY: all build clean restore rebuild help
+.PHONY: all build check clean restore rebuild rebuild-check help
 
 # 默认目标：构建
 all: build
@@ -17,6 +17,15 @@ all: build
 # 构建项目
 build:
 	$(DOTNET) build -c $(CONFIG) $(PROJECT)
+
+# 检查：零警告零错误，用于改动后强制验证
+# 规则依据 .trae/rules/rimworld-mod-dev.md "发布检查" 条款
+# -warnaserror:将警告升级为错误，任何警告都会导致非零退出码
+# -nologo:抑制版权信息，便于日志阅读
+check:
+	@echo "[check] 验证零警告零错误..."
+	@$(DOTNET) build -c $(CONFIG) -warnaserror -nologo $(PROJECT)
+	@echo "[check] PASS: 零警告零错误"
 
 # 仅还原依赖（无 NuGet 包时几乎无操作，留作扩展）
 restore:
@@ -30,11 +39,16 @@ clean:
 # 重新构建：先清理再构建
 rebuild: clean build
 
+# 重新构建后检查
+rebuild-check: clean check
+
 # 查看可用目标
 help:
 	@echo AutoEquipment Makefile 目标:
-	@echo   make build     构建项目 (默认)
-	@echo   make clean     清理构建产物
-	@echo   make rebuild   清理后重新构建
-	@echo   make restore   还原 NuGet 依赖
-	@echo   make help      显示此帮助信息
+	@echo   make build          构建项目 (默认)
+	@echo   make check          验证零警告零错误 (规则强制)
+	@echo   make clean         清理构建产物
+	@echo   make rebuild       清理后重新构建
+	@echo   make rebuild-check 清理后重新构建并验证
+	@echo   make restore       还原 NuGet 依赖
+	@echo   make help          显示此帮助信息
