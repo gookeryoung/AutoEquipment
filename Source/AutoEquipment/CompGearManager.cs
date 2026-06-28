@@ -44,13 +44,6 @@ namespace AutoEquipment
 
         private int tickOffset = -1;
 
-        // 食尸鬼装备清理：首次 Tick 立即执行一次，覆盖游戏加载场景
-        // 无需存档：每次加载游戏都重新检查，确保旧存档遗留装备被清理
-        private bool initialGhoulCheckDone;
-        // 食尸鬼装备复查间隔：5 分钟 = 18000 tick
-        // 5 分钟足够低频避免性能损失，又能及时发现玩家手动装备的异常情况
-        private const int GhoulCleanInterval = 18000;
-
         public Pawn Pawn => (Pawn)parent;
 
         public Role CurrentRole
@@ -88,20 +81,14 @@ namespace AutoEquipment
             if (Pawn.IsPrisoner) return;
             if (QuestUtility.IsQuestLodger(Pawn)) return; // 临时任务成员
 
-            // 食尸鬼（Anomaly DLC 变异体）无法使用武器装备，必须完全跳过装备管理
-            // 但需周期性清理其身上残留的装备（玩家手动装备或旧存档遗留）
+            // 食尸鬼（Anomaly DLC 变异体）无法使用武器装备，禁止参与装备管理
+            // 设计原则：逻辑上杜绝食尸鬼进入装备管理流程，而非事后清理
+            // 玩家手动给食尸鬼装备的物品由玩家自行负责，MOD 不干预
+            // 此处兜底处理：旧存档可能已注入 Comp，静默自移除避免 Tick 持续空转
             if (DLCCompat.IsGhoul(Pawn))
             {
-                // 首次 Tick 立即清理一次（覆盖游戏加载场景），之后每 5 分钟复查
-                // 使用 thingIDNumber 分散检查时机，避免所有食尸鬼同 tick 触发造成卡顿
-                if (!initialGhoulCheckDone)
-                {
-                    initialGhoulCheckDone = true;
-                    CleanGhoulEquipment();
-                    return;
-                }
-                if ((Find.TickManager.TicksGame + Pawn.thingIDNumber) % GhoulCleanInterval != 0) return;
-                CleanGhoulEquipment();
+                if (parent.AllComps.Contains(this))
+                    parent.AllComps.Remove(this);
                 return;
             }
 
@@ -219,37 +206,6 @@ namespace AutoEquipment
                 || def == JobDefOf.TendEntity
                 || def == JobDefOf.Rescue
                 || def == JobDefOf.TakeToBedToOperate;
-        }
-
-        // ===================== 食尸鬼装备清理 =====================
-
-        /// <summary>
-        /// 清理食尸鬼身上的武器与防具。
-        /// 食尸鬼无法有效使用装备，玩家手动装备或旧存档遗留的物品应当被自动卸下。
-        /// 该方法低频调用（首次 Tick + 每 5 分钟），不影响 Tick 性能。
-        /// </summary>
-        private void CleanGhoulEquipment()
-        {
-            // 卸下主武器
-            ThingWithComps primary = Pawn.equipment?.Primary;
-            if (primary != null)
-            {
-                Pawn.equipment.TryDropEquipment(primary, out ThingWithComps dropped, Pawn.Position, false);
-                Log.Message("[AutoEquipment] 食尸鬼 " + Pawn.LabelShort + " 自动卸下武器 " + primary.LabelShort);
-            }
-
-            // 脱下所有防具（从后往前遍历，移除时索引不错位）
-            if (Pawn.apparel != null && Pawn.apparel.WornApparel.Count > 0)
-            {
-                for (int i = Pawn.apparel.WornApparel.Count - 1; i >= 0; i--)
-                {
-                    Apparel a = Pawn.apparel.WornApparel[i];
-                    if (Pawn.apparel.TryDrop(a))
-                    {
-                        Log.Message("[AutoEquipment] 食尸鬼 " + Pawn.LabelShort + " 自动脱下 " + a.LabelShort);
-                    }
-                }
-            }
         }
 
         // ===================== 手动触发换装 =====================

@@ -115,3 +115,68 @@
   - `Source/AutoEquipment/Scoring/Apparels/*` → `namespace AutoEquipment.Scoring.Apparels`
 - 跨命名空间引用必须显式 `using`，禁止依赖 IDE 自动补全
 - 提交前必须 `make check` 通过，否则禁止视为"已完成"
+
+## 同步计算规则（强制）
+
+> 评分模型、权重、计算公式是面向玩家的契约，**修改代码必须同步更新文档**。
+> 文档与代码不一致视为"未完成"，禁止提交。
+
+### 必须同步 README.md 的变更类型
+
+修改以下任一内容时，必须同步更新 `README.md` 对应章节：
+
+1. **角色检测规则**（`PawnRole.cs` / `RoleDetector`）
+   - 修改角色判定优先级、新增/删除角色枚举值、调整阈值（如 `>= 8` 改为 `>= 10`）
+   - 同步章节：`## 角色检测规则` 表格
+
+2. **情境检测规则**（`GearContext.cs` / `ContextDetector`）
+   - 新增/删除情境枚举值、修改触发条件、调整持续 tick 阈值
+   - 同步章节：`## 情境检测规则` 表格
+
+3. **权重模型**（`GearWeights.cs`）
+   - 新增/删除权重字段、修改字段语义、调整任一预设方案的默认值
+   - 同步章节：`## 评分模型 → 权重预设方案` 与 README 中字段说明
+
+4. **评分管线**（`ScoringPipelineFactory.cs`）
+   - 新增/删除 Scorer、调整 Scorer 执行顺序、修改管线构造逻辑
+   - 同步章节：`## 武器评分管线` / `## 防具评分管线` 表格
+
+5. **评分公式**（任一 `IScorer` 实现的加分逻辑）
+   - 修改兴趣乘数（如单火 1.5 → 1.8）、修改硬编码特质加分、修改 Veto 阈值
+   - 同步章节：对应 Scorer 的"说明"列与 `## 总分公式`
+
+6. **副武器分配**（`SidearmAllocator.cs`）
+   - 修改战斗价值公式、调整分配周期、修改优先级规则
+   - 同步章节：`## 副武器全局分配` 与公式块
+
+7. **预设方案**（`GearPreset.cs` / `GearPolicyEngine.cs`）
+   - 新增/删除预设枚举值、修改方案特点说明
+   - 同步章节：`## 权重预设方案` 表格
+
+8. **评估周期**（`CompGearManager.cs` Tick 路径）
+   - 修改 `evaluateInterval` 默认值、调整 Tick 分散策略、新增周期路径
+   - 同步章节：`## 评估周期` 表格
+
+9. **设计原则**（不适用 Pawn 的处理逻辑）
+   - 修改入口防御策略、调整兜底处理方式
+   - 同步章节：`## 设计原则：逻辑杜绝而非事后清理`
+
+### 同步检查清单
+
+提交前自检：
+
+- [ ] 改了 `GearWeights.cs`？→ README `权重预设方案` 表格已更新
+- [ ] 改了 `ScoringPipelineFactory.cs`？→ README 管线表格已更新
+- [ ] 改了任一 Scorer 的加分公式？→ README 对应行说明已更新
+- [ ] 改了 `PawnRole.cs`？→ README 角色表格已更新
+- [ ] 改了 `GearContext.cs`？→ README 情境表格已更新
+- [ ] 改了 `SidearmAllocator.cs`？→ README 副武器章节已更新
+- [ ] 改了 Tick 周期？→ README `评估周期` 表格已更新
+- [ ] `make check` 通过
+
+### 文档语言
+
+- README.md 与 rimworld-mod-dev.md 均以中文为主语言
+- 公式、字段名、类名保留英文原文
+- 玩家可见的说明必须可读，禁止纯技术黑话
+
