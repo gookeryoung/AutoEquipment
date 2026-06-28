@@ -27,10 +27,13 @@ namespace AutoEquipment
 
             float score = breakdown.Vetoed ? breakdown.VetoScore : breakdown.Total;
 
-            // 可疑评分日志：真实武器却得 0 或负分时记录
+            // 可疑评分：真实武器却得 0 或负分时记录（WarningOnce 防刷屏，详细报告走调试开关）
             if (score <= 0f && (weapon.def.IsRangedWeapon || weapon.def.IsMeleeWeapon))
             {
-                Log.Warning($"[AutoEquipment] ScoreWeapon: 可疑评分 {score:F1} for {pawn.LabelShort} + '{weapon.def.defName}' (role={role}, context={context})\n{breakdown.BuildReport(pawn.LabelShort, weapon.LabelShort)}");
+                Log.WarningOnce($"[AutoEquipment] ScoreWeapon 可疑评分 {score:F1}: {pawn.LabelShort} + '{weapon.def.defName}' (role={role}, context={context})",
+                    pawn.thingIDNumber ^ weapon.thingIDNumber);
+                if (AEDebug.IsActive)
+                    AEDebug.Log(breakdown.BuildReport(pawn.LabelShort, weapon.LabelShort));
             }
 
             return score;
@@ -65,10 +68,13 @@ namespace AutoEquipment
 
             float score = breakdown.Vetoed ? breakdown.VetoScore : breakdown.Total;
 
-            // 可疑评分日志：非沾染却得负分
+            // 可疑评分：非沾染却得负分（WarningOnce 防刷屏，详细报告走调试开关）
             if (score <= 0f && !apparel.WornByCorpse)
             {
-                Log.Warning($"[AutoEquipment] ScoreApparel: 可疑评分 {score:F1} for {pawn.LabelShort} + '{apparel.def.defName}' (role={role}, context={context})\n{breakdown.BuildReport(pawn.LabelShort, apparel.LabelShort)}");
+                Log.WarningOnce($"[AutoEquipment] ScoreApparel 可疑评分 {score:F1}: {pawn.LabelShort} + '{apparel.def.defName}' (role={role}, context={context})",
+                    pawn.thingIDNumber ^ apparel.thingIDNumber);
+                if (AEDebug.IsActive)
+                    AEDebug.Log(breakdown.BuildReport(pawn.LabelShort, apparel.LabelShort));
             }
 
             return score;

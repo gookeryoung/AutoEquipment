@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using RimWorld;
 using Verse;
 
@@ -30,11 +30,11 @@ namespace AutoEquipment.Scoring
             // 按顺序执行所有 Scorer
             for (int i = 0; i < scorers.Count; i++)
             {
-                // 否决后跳过后续 Scorer（耐久修正除外，仍需应用）
+                // 否决后短路：跳过后续所有 Scorer
+                // 耐久修正 Scorer 即使在管线末尾也不会执行——
+                // 否决分已是 -9000，再乘以耐久系数无意义
                 if (breakdown.Vetoed)
                 {
-                    // 仅允许耐久修正 Scorer 继续执行
-                    // 但实际上否决分数已经是 -9000，耐久修正无意义
                     break;
                 }
 
