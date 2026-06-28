@@ -104,7 +104,7 @@ namespace AutoEquipment
                 {
                     try
                     {
-                        AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 征召副武器检查 (role={CurrentRole}, weapon={Pawn.equipment?.Primary?.LabelShort ?? "none"})");
+                        AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 征召副武器检查 (role={CurrentRole}, weapon={Pawn.equipment?.Primary?.LabelShort ?? "none"})");
                         CheckMeleeSidearm(CurrentRole);
                     }
                     catch (Exception ex)
@@ -133,13 +133,13 @@ namespace AutoEquipment
                 bool contextChanged = context != prevContext;
                 lastContext = context;
 
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 评估 tick: role={role}, context={context}, contextChanged={contextChanged}, weapon={Pawn.equipment?.Primary?.LabelShort ?? "none"}, isSlave={isSlave}, isChild={isChild}");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 评估 tick: role={role}, context={context}, contextChanged={contextChanged}, weapon={Pawn.equipment?.Primary?.LabelShort ?? "none"}, isSlave={isSlave}, isChild={isChild}");
 
                 // 不打断医疗工作：治疗、手术、救援
                 // TryTakeOrderedJob 会取消当前工作，导致医生把药品装进口袋并陷入死循环
                 if (IsDoingMedicalJob())
                 {
-                    AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 跳过评估：正在执行医疗工作 ({Pawn.CurJob?.def?.defName})");
+                    AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 跳过评估：正在执行医疗工作 ({Pawn.CurJob?.def?.defName})");
                     return;
                 }
 
@@ -154,9 +154,9 @@ namespace AutoEquipment
                 if (needWeaponEval)
                 {
                     if (contextChanged)
-                        AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 执行 EvaluateWeapon (情境变化 {prevContext}->{context})");
+                        AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 执行 EvaluateWeapon (情境变化 {prevContext}->{context})");
                     else
-                        AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 执行 EvaluateWeapon (无武器，强制评估)");
+                        AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 执行 EvaluateWeapon (无武器，强制评估)");
                     EvaluateWeapon(role, context, contextChanged);
                 }
 
@@ -169,20 +169,20 @@ namespace AutoEquipment
                         || prevContext == GearContext.Hot);
                 if (AESettings.autoApparel)
                 {
-                    AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 执行 EvaluateApparel (apparelContextChanged={apparelContextChanged})");
+                    AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 执行 EvaluateApparel (apparelContextChanged={apparelContextChanged})");
                     EvaluateApparel(role, context, apparelContextChanged);
                 }
 
                 if (AESettings.autoInventory && !isChild)
                 {
-                    AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 执行 EvaluateInventory");
+                    AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 执行 EvaluateInventory");
                     EvaluateInventory(role);
                 }
 
                 // 副武器仅对殖民者（非奴隶、非未成年）
                 if (AESettings.sidearms && !isSlave && !isChild)
                 {
-                    AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 执行 EvaluateSidearm");
+                    AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 执行 EvaluateSidearm");
                     EvaluateSidearm(role);
                 }
 
@@ -362,7 +362,7 @@ namespace AutoEquipment
                     ? GearScorer.ScoreWeapon(Pawn, currentWeapon, role, context) : -500f;
             }
 
-            AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateWeapon: current={currentWeapon?.LabelShort ?? "none"} score={currentScore:F1}, role={role}, context={context}, contextChanged={contextChanged}");
+            AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateWeapon: current={currentWeapon?.LabelShort ?? "none"} score={currentScore:F1}, role={role}, context={context}, contextChanged={contextChanged}");
 
             // 监测：当前武器评分
             if (monitorWeapon && currentWeapon != null && currentBreakdown != null)
@@ -419,7 +419,7 @@ namespace AutoEquipment
 
             if (bestWeapon != null && bestWeapon != currentWeapon)
             {
-                Log.Message($"[AutoEquipment] {Pawn.LabelShort} EvaluateWeapon 决策: 切换到 '{bestWeapon.LabelShort}' (score={bestScore:F1}) 从 '{currentWeapon?.LabelShort ?? "none"}' (score={currentScore:F1}). 检查 {candidatesChecked} 件武器, 跳过 {candidatesSkipped}");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateWeapon 决策: 切换到 '{bestWeapon.LabelShort}' (score={bestScore:F1}) 从 '{currentWeapon?.LabelShort ?? "none"}' (score={currentScore:F1}). 检查 {candidatesChecked} 件武器, 跳过 {candidatesSkipped}");
                 var job = JobMaker.MakeJob(JobDefOf.Equip, bestWeapon);
                 Pawn.jobs.TryTakeOrderedJob(job, Verse.AI.JobTag.Misc);
 
@@ -428,7 +428,7 @@ namespace AutoEquipment
             }
             else
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateWeapon: 保留当前武器. 检查 {candidatesChecked} 候选, 跳过 {candidatesSkipped}, 无超越阈值");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateWeapon: 保留当前武器. 检查 {candidatesChecked} 候选, 跳过 {candidatesSkipped}, 无超越阈值");
             }
         }
 
@@ -457,12 +457,12 @@ namespace AutoEquipment
 
             if (prefersNudity)
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateApparel: 跳过（偏好裸体）");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateApparel: 跳过（偏好裸体）");
                 return;
             }
 
             int wornCount = Pawn.apparel.WornApparel.Count;
-            AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateApparel: role={role}, context={context}, contextChanged={contextChanged}, 穿戴 {wornCount} 件");
+            AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateApparel: role={role}, context={context}, contextChanged={contextChanged}, 穿戴 {wornCount} 件");
 
             // 腰带附件全局分配：纯近战角色（射击无火）优先装备护盾/消防背包
             // 受 3000 tick 全局周期控制，确保全局至少 1 人消防背包
@@ -545,7 +545,7 @@ namespace AutoEquipment
             {
                 // 构建冲突防具日志（避免 Tick 路径中 LINQ，改用 for 循环）
                 string conflictInfo = BuildConflictApparelInfo(role, context, bestApparel);
-                Log.Message($"[AutoEquipment] {Pawn.LabelShort} EvaluateApparel 决策: 切换到 {bestApparel.LabelShort} (score={bestScore:F1}) 替换穿戴 (score={bestWornScore:F1}, threshold={AESettings.upgradeThreshold:F2}). 检查 {candidatesChecked} 候选. 冲突防具: {conflictInfo}");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateApparel 决策: 切换到 {bestApparel.LabelShort} (score={bestScore:F1}) 替换穿戴 (score={bestWornScore:F1}, threshold={AESettings.upgradeThreshold:F2}). 检查 {candidatesChecked} 候选. 冲突防具: {conflictInfo}");
                 var job = JobMaker.MakeJob(JobDefOf.Wear, bestApparel);
                 Pawn.jobs.TryTakeOrderedJob(job, Verse.AI.JobTag.Misc);
 
@@ -554,7 +554,7 @@ namespace AutoEquipment
             }
             else
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateApparel: 无升级. 检查 {candidatesChecked} 候选");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateApparel: 无升级. 检查 {candidatesChecked} 候选");
             }
         }
 
@@ -599,7 +599,7 @@ namespace AutoEquipment
 
             if (!shouldCarryMeds)
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateInventory: 跳过 (role={role}, medSkill={medSkill}, shouldCarry=false)");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateInventory: 跳过 (role={role}, medSkill={medSkill}, shouldCarry=false)");
                 return;
             }
 
@@ -616,7 +616,7 @@ namespace AutoEquipment
             if (medsInInventory > AESettings.medicineCount)
             {
                 int excess = medsInInventory - AESettings.medicineCount;
-                Log.Message($"[AutoEquipment] {Pawn.LabelShort} EvaluateInventory: 丢弃 {excess} 件多余药品 (持有 {medsInInventory}, 上限 {AESettings.medicineCount})");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateInventory: 丢弃 {excess} 件多余药品 (持有 {medsInInventory}, 上限 {AESettings.medicineCount})");
                 var inv = Pawn.inventory.innerContainer;
                 for (int i = inv.Count - 1; i >= 0 && excess > 0; i--)
                 {
@@ -625,7 +625,7 @@ namespace AutoEquipment
                         int drop = Math.Min(excess, inv[i].stackCount);
                         if (inv.TryDrop(inv[i], Pawn.Position, Pawn.Map, ThingPlaceMode.Near, drop, out _))
                         {
-                            AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} 丢弃 {drop}x {inv[i].def.label}");
+                            AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} 丢弃 {drop}x {inv[i].def.label}");
                             excess -= drop;
                         }
                     }
@@ -635,7 +635,7 @@ namespace AutoEquipment
 
             if (medsInInventory >= AESettings.medicineCount)
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateInventory: 已满 ({medsInInventory}/{AESettings.medicineCount})");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateInventory: 已满 ({medsInInventory}/{AESettings.medicineCount})");
                 return;
             }
 
@@ -655,7 +655,7 @@ namespace AutoEquipment
             if (bestMed != null)
             {
                 int pickupCount = Math.Min(needed, bestMed.stackCount);
-                Log.Message($"[AutoEquipment] {Pawn.LabelShort} EvaluateInventory: 拾取 {pickupCount}x {bestMed.def.label} (持有 {medsInInventory}, 需 {needed})");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateInventory: 拾取 {pickupCount}x {bestMed.def.label} (持有 {medsInInventory}, 需 {needed})");
 
                 var job = JobMaker.MakeJob(JobDefOf.TakeCountToInventory, bestMed);
                 job.count = pickupCount;
@@ -665,7 +665,7 @@ namespace AutoEquipment
             }
             else
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} EvaluateInventory: 附近无药品");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} EvaluateInventory: 附近无药品");
             }
         }
 
@@ -690,25 +690,25 @@ namespace AutoEquipment
         {
             if (!ContextDetector.IsUnderMeleeAttack(Pawn))
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm: 未受近战攻击");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm: 未受近战攻击");
                 return;
             }
 
             Thing currentWeapon = Pawn.equipment?.Primary;
             if (currentWeapon == null)
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm: 受近战攻击但未装备武器");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm: 受近战攻击但未装备武器");
                 return;
             }
 
             // 已使用近战武器则无需切换
             if (currentWeapon.def.IsMeleeWeapon)
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm: 已使用近战 ({currentWeapon.LabelShort})");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm: 已使用近战 ({currentWeapon.LabelShort})");
                 return;
             }
 
-            AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm: 持远程武器受近战攻击 ({currentWeapon.LabelShort}), 搜索库存近战副武器");
+            AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm: 持远程武器受近战攻击 ({currentWeapon.LabelShort}), 搜索库存近战副武器");
 
             // 在库存中寻找最佳近战武器
             Thing bestMelee = null;
@@ -731,11 +731,11 @@ namespace AutoEquipment
                 var bio = (currentWeapon as ThingWithComps)?.TryGetComp<CompBiocodable>();
                 if (bio != null && bio.Biocoded)
                 {
-                    AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm: 不替换生物编码武器 ({currentWeapon.LabelShort})");
+                    AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm: 不替换生物编码武器 ({currentWeapon.LabelShort})");
                     return;
                 }
 
-                Log.Message($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm 决策: 抽出近战副武器 '{bestMelee.LabelShort}' (score={bestScore:F1}), 收起远程 '{currentWeapon.LabelShort}'");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm 决策: 抽出近战副武器 '{bestMelee.LabelShort}' (score={bestScore:F1}), 收起远程 '{currentWeapon.LabelShort}'");
 
                 // 保存当前武器为主武器（稍后重新装备）
                 primaryWeapon = currentWeapon;
@@ -757,7 +757,7 @@ namespace AutoEquipment
             }
             else
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} CheckMeleeSidearm: 受近战攻击但库存无近战副武器");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} CheckMeleeSidearm: 受近战攻击但库存无近战副武器");
             }
         }
 
@@ -768,16 +768,16 @@ namespace AutoEquipment
         {
             if (sidearm == null || primaryWeapon == null)
             {
-                AEDebug.Log($"[AutoEquipment] {Pawn.LabelShort} OnUndraft: 无副武器/主武器可恢复 (sidearm={sidearm?.LabelShort ?? "null"}, primary={primaryWeapon?.LabelShort ?? "null"})");
+                AEDebug.Log($"[AutoEquipment] {AEDebug.Label(Pawn)} OnUndraft: 无副武器/主武器可恢复 (sidearm={sidearm?.LabelShort ?? "null"}, primary={primaryWeapon?.LabelShort ?? "null"})");
                 return;
             }
             if (Pawn.Map == null)
             {
-                Log.Warning($"[AutoEquipment] {Pawn.LabelShort} OnUndraft: Pawn 无地图, 清空副武器状态");
+                Log.Warning($"[AutoEquipment] {AEDebug.Label(Pawn)} OnUndraft: Pawn 无地图, 清空副武器状态");
                 sidearm = null; primaryWeapon = null; return;
             }
 
-            Log.Message($"[AutoEquipment] {Pawn.LabelShort} OnUndraft: 恢复主武器 '{primaryWeapon.LabelShort}', 收起副武器 '{sidearm.LabelShort}'");
+            Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} OnUndraft: 恢复主武器 '{primaryWeapon.LabelShort}', 收起副武器 '{sidearm.LabelShort}'");
 
             Thing currentWeapon = Pawn.equipment?.Primary;
             if (currentWeapon == sidearm)
@@ -794,7 +794,7 @@ namespace AutoEquipment
             }
             else
             {
-                Log.Warning($"[AutoEquipment] {Pawn.LabelShort} OnUndraft: 当前武器 '{currentWeapon?.LabelShort ?? "none"}' 非副武器 '{sidearm.LabelShort}' —— 武器可能已丢失");
+                Log.Warning($"[AutoEquipment] {AEDebug.Label(Pawn)} OnUndraft: 当前武器 '{currentWeapon?.LabelShort ?? "none"}' 非副武器 '{sidearm.LabelShort}' —— 武器可能已丢失");
             }
 
             // 从库存重新装备主武器（处理副武器被销毁/丢失情况）
@@ -802,13 +802,13 @@ namespace AutoEquipment
                 && Pawn.equipment?.Primary != primaryWeapon
                 && Pawn.inventory.innerContainer.Contains(primaryWeapon))
             {
-                Log.Message($"[AutoEquipment] {Pawn.LabelShort} OnUndraft: 从库存重新装备主武器 '{primaryWeapon.LabelShort}'");
+                Log.Message($"[AutoEquipment] {AEDebug.Label(Pawn)} OnUndraft: 从库存重新装备主武器 '{primaryWeapon.LabelShort}'");
                 Pawn.inventory.innerContainer.Remove(primaryWeapon);
                 Pawn.equipment.AddEquipment(primaryWeapon as ThingWithComps);
             }
             else if (primaryWeapon as ThingWithComps != null && !Pawn.inventory.innerContainer.Contains(primaryWeapon))
             {
-                Log.Warning($"[AutoEquipment] {Pawn.LabelShort} OnUndraft: 主武器 '{primaryWeapon.LabelShort}' 不在库存中 —— 可能已丢失/销毁");
+                Log.Warning($"[AutoEquipment] {AEDebug.Label(Pawn)} OnUndraft: 主武器 '{primaryWeapon.LabelShort}' 不在库存中 —— 可能已丢失/销毁");
             }
 
             sidearm = null;

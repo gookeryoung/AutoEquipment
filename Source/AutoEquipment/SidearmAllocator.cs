@@ -422,7 +422,7 @@ namespace AutoEquipment
             pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
             // 决策日志：玩家可见的换装反馈（低频，受全局周期控制）
-            Log.Message($"[AutoEquipment] 副武器分配: {pawn.LabelShort} (战斗价值={ComputeCombatValue(pawn):F1}) ← {weapon.LabelShort} (score={score:F1})");
+            Log.Message($"[AutoEquipment] 副武器分配: {AEDebug.Label(pawn)} (战斗价值={ComputeCombatValue(pawn):F1}) ← {weapon.LabelShort} (score={score:F1})");
         }
     }
 }

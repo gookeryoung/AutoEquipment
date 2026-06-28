@@ -12,13 +12,16 @@ namespace AutoEquipment
     public class ITab_GearManager : ITab
     {
         private Vector2 scrollPos;
-        private float lastHeight;
+        // 初始高度需大于 0：ScrollView 的内容区高度若为 0，第一次绘制时所有控件被裁剪不可见
+        // 用一个足够大的初始值确保首帧即显示，之后每次 FillTab 都会用真实高度刷新
+        private float lastHeight = 1500f;
 
         public ITab_GearManager()
         {
             labelKey = "AE_Tab";
-            // 扩大面板：容纳全局重配规则（含护甲偏好）的可调项
-            size = new Vector2(340f, 720f);
+            // 面板尺寸：高度限制在屏幕可见范围，超出部分由 ScrollView 滚动
+            // 340x640 适配大多数分辨率，避免超出底部消息栏区域
+            size = new Vector2(340f, 640f);
         }
 
         public override bool IsVisible

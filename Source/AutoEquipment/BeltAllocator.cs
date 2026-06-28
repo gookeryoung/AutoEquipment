@@ -180,7 +180,7 @@ namespace AutoEquipment
             var job = JobMaker.MakeJob(JobDefOf.Wear, belt);
             pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
-            Log.Message($"[AutoEquipment] 腰带分配: {pawn.LabelShort} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
+            Log.Message($"[AutoEquipment] 腰带分配: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
         }
 
         // ===================== 判定辅助 =====================
