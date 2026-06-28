@@ -61,19 +61,22 @@ namespace AutoEquipment
 
         public static void DrawSettings(Rect inRect)
         {
-            // 设置项较多，固定高度会超出窗口，使用 ScrollView 支持滚动
-            // 注意：RimWorld 的 ScrollView inner rect 必须从 (0,0) 开始，
-            // 否则内容会偏移到 ScrollView 外导致不可见
-            float contentHeight = 560f;
+            // 双列布局：内容压缩到约 380f 高，多数窗口无需滚动即可完整显示
+            // 保留 ScrollView 作为极小窗口的安全兜底
+            float contentHeight = 400f;
             Rect scrollRect = new Rect(inRect.x, inRect.y, inRect.width, inRect.height);
             Rect viewRect = new Rect(0f, 0f, inRect.width - 16f, contentHeight);
 
             Widgets.BeginScrollView(scrollRect, ref settingsScrollPos, viewRect);
 
-            // 将 ScrollView 起点平移到屏幕坐标，保证 Listing 正确绘制
-            // (BeginScrollView 会自动应用坐标变换，所以传入 viewRect 即可)
+            // 分左右两列：左列放主要开关，右列放副武器/阈值/调试
+            float colWidth = (viewRect.width - 12f) * 0.5f;
+            Rect leftCol = new Rect(0f, 0f, colWidth, contentHeight);
+            Rect rightCol = new Rect(colWidth + 12f, 0f, colWidth, contentHeight);
+
+            // ===================== 左列 =====================
             Listing_Standard l = new Listing_Standard();
-            l.Begin(viewRect);
+            l.Begin(leftCol);
 
             l.CheckboxLabeled("AE_Enabled".Translate(), ref enabled);
             if (!enabled) { l.End(); Widgets.EndScrollView(); return; }
@@ -92,39 +95,46 @@ namespace AutoEquipment
             l.CheckboxLabeled("AE_TemperatureAware".Translate(), ref temperatureAware);
             l.CheckboxLabeled("AE_JobAwareApparel".Translate(), ref jobAwareApparel);
 
-            l.GapLine();
-            l.Label("AE_SidearmSettings".Translate());
-            l.CheckboxLabeled("AE_AutoMelee".Translate(), ref autoMeleeSidearm);
-            l.CheckboxLabeled("AE_CarryMedicine".Translate(), ref carryMedicine);
+            l.End();
+
+            // ===================== 右列 =====================
+            Listing_Standard r = new Listing_Standard();
+            r.Begin(rightCol);
+
+            r.Label("AE_SidearmSettings".Translate());
+            r.CheckboxLabeled("AE_AutoMelee".Translate(), ref autoMeleeSidearm);
+            r.CheckboxLabeled("AE_CarryMedicine".Translate(), ref carryMedicine);
             if (carryMedicine)
             {
-                l.Label("AE_MedicineCount".Translate() + ": " + medicineCount);
-                medicineCount = (int)l.Slider(medicineCount, 1, 10);
+                r.Label("AE_MedicineCount".Translate() + ": " + medicineCount);
+                medicineCount = (int)r.Slider(medicineCount, 1, 10);
             }
 
-            l.GapLine();
-            l.Label("AE_UpgradeThreshold".Translate() + ": " + (upgradeThreshold * 100f).ToString("F0") + "%");
-            upgradeThreshold = l.Slider(upgradeThreshold, 0.05f, 0.50f);
+            r.GapLine();
+            r.Label("AE_UpgradeThreshold".Translate() + ": " + (upgradeThreshold * 100f).ToString("F0") + "%");
+            upgradeThreshold = r.Slider(upgradeThreshold, 0.05f, 0.50f);
 
-            l.GapLine();
-            l.CheckboxLabeled("AE_DebugLogging".Translate(), ref debugLogging, "AE_DebugLogging_Desc".Translate());
+            r.GapLine();
+            r.CheckboxLabeled("AE_DebugLogging".Translate(), ref debugLogging, "AE_DebugLogging_Desc".Translate());
 
-            // 调试工具组：手动触发的运维操作
-            l.GapLine();
-            l.Label("AE_DebugTools".Translate());
-            if (l.ButtonText("AE_DebugCleanGhouls".Translate()))
+            // 调试工具：标签 + 两个按钮并排
+            r.GapLine();
+            r.Label("AE_DebugTools".Translate());
+
+            // 两个按钮放在同一行，节省垂直空间
+            Rect btnRect = r.GetRect(30f);
+            float btnWidth = (btnRect.width - 8f) * 0.5f;
+            if (Widgets.ButtonText(new Rect(btnRect.x, btnRect.y, btnWidth, 30f), "AE_DebugCleanGhouls".Translate()))
             {
                 int cleaned = CompGearManager.CleanAllGhouls();
                 Messages.Message("AE_DebugCleanGhoulsResult".Translate(cleaned), MessageTypeDefOf.TaskCompletion);
             }
-
-            // 立即换装：点击后弹出菜单选择目标类型，再选择角色筛选
-            if (l.ButtonText("AE_DebugReload".Translate()))
+            if (Widgets.ButtonText(new Rect(btnRect.x + btnWidth + 8f, btnRect.y, btnWidth, 30f), "AE_DebugReload".Translate()))
             {
                 Find.WindowStack.Add(new ReloadTargetMenu());
             }
 
-            l.End();
+            r.End();
 
             Widgets.EndScrollView();
         }

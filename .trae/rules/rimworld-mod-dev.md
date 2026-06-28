@@ -26,6 +26,9 @@
 - `Listing_Standard` 在 ScrollView 内绘制时直接 `Begin(innerRect)`，由 ScrollView 自动应用坐标变换
 - 设置类（继承 `Mod`）需用 `static Vector2` 字段保存滚动位置，避免每次重置
 - 自定义 `Window` 子类必须重写 `InitialSize`，且窗口大小需能容纳所有按钮（每按钮约 30f 高）
+- 设置项超过 8 个时必须用双列布局：把 `viewRect` 分成左右两半，分别 `Begin` 两个 `Listing_Standard`
+- 多个操作按钮（如调试工具）必须并排放置：用 `GetRect(30f)` 取一行后按 `btnWidth = (width - gap) * 0.5f` 分割，避免按钮纵向堆叠挤压可见区
+- 优先用 `CheckboxLabeled` 替代独立标签+控件，减少行数
 
 ## Harmony 补丁
 

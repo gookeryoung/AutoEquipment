@@ -350,27 +350,43 @@ namespace AutoEquipment
         public static int TriggerReload(ReloadTarget target, Role roleFilter)
         {
             int triggered = 0;
+            int scanned = 0;
+            int skippedGhoul = 0;
+            int skippedComp = 0;
+            int skippedRole = 0;
+
             foreach (Map map in Find.Maps)
             {
-                foreach (Pawn pawn in map.mapPawns.FreeColonistsAndPrisonersSpawned)
+                // 用 AllPawnsSpawned + 手动筛选，与 CleanAllGhouls 保持一致
+                // 避免使用 FreeColonistsAndPrisonersSpawned 在某些情况下的边界问题
+                foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned)
                 {
-                    if (pawn.Dead || pawn.Downed) continue;
                     if (pawn.Faction != Faction.OfPlayer) continue;
-                    if (DLCCompat.IsGhoul(pawn)) continue;
+                    if (!pawn.IsColonist) continue;
+                    if (pawn.Dead || pawn.Downed) continue;
+                    scanned++;
+
+                    if (DLCCompat.IsGhoul(pawn)) { skippedGhoul++; continue; }
 
                     var comp = pawn.GetComp<CompGearManager>();
-                    if (comp == null) continue;
+                    if (comp == null) { skippedComp++; continue; }
 
-                    // 角色筛选：All 表示不筛选
+                    // 角色筛选：Default 表示不筛选
                     if (roleFilter != Role.Default
                         && comp.CurrentRole != roleFilter)
+                    {
+                        skippedRole++;
                         continue;
+                    }
 
                     comp.ForceEvaluate(target);
                     triggered++;
                 }
             }
-            Log.Message($"[AutoEquipment] 手动换装触发完成：target={target}, roleFilter={roleFilter}, 触发 {triggered} 个殖民者");
+
+            Log.Message($"[AutoEquipment] 手动换装统计: target={target}, roleFilter={roleFilter}, " +
+                $"扫描={scanned}, 触发={triggered}, " +
+                $"跳过(食尸鬼={skippedGhoul}, 无Comp={skippedComp}, 角色不匹配={skippedRole})");
             return triggered;
         }
 
