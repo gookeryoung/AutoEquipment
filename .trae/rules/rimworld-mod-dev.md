@@ -183,6 +183,7 @@
 - [ ] 改了 Brawler Veto/双修偏好/EMP 副武器/贴身切换？→ README `主武器选择规则` 表格已更新
 - [ ] 改了 `BeltAllocator.cs`？→ README `腰带附件全局分配` 章节已更新
 - [ ] `make check` 通过
+- [ ] 调用`uvx --from pyflowx gitt a`, `uvx --from pyflowx pymake p` 提交代码
 
 ### 文档语言
 
