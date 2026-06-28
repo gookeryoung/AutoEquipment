@@ -17,8 +17,8 @@ namespace AutoEquipment
         public ITab_GearManager()
         {
             labelKey = "AE_Tab";
-            // 扩大面板：容纳全局重配规则的可调项
-            size = new Vector2(340f, 620f);
+            // 扩大面板：容纳全局重配规则（含护甲偏好）的可调项
+            size = new Vector2(340f, 720f);
         }
 
         public override bool IsVisible
@@ -135,6 +135,65 @@ namespace AutoEquipment
             Text.Font = GameFont.Small;
             l.Gap();
 
+            // ---- 自定义评级识别码（当前 Pawn） ----
+            GUI.color = new Color(0.85f, 0.85f, 0.85f);
+            l.Label("AE_ReallocRules_CustomTier".Translate());
+            GUI.color = Color.white;
+            Text.Font = GameFont.Tiny;
+            GUI.color = new Color(0.7f, 0.7f, 0.7f);
+            l.Label("AE_ReallocRules_CustomTier_Desc".Translate());
+            GUI.color = Color.white;
+            Text.Font = GameFont.Small;
+
+            // 显示当前 Pawn 的自动评级与自定义评级（如有）
+            string pawnName = SidearmAllocator.GetPawnLookupName(pawn);
+            CombatTier autoTier = SidearmAllocator.GetAutoCombatTier(pawn);
+            bool hasCustom = AESettings.TryGetCustomTier(pawnName, out CombatTier customTier);
+
+            if (hasCustom)
+            {
+                // 命中自定义评级：显示识别码 [等级#名字] 与自动档对比
+                l.Label("AE_ReallocRules_CurrentTier".Translate() + ": " +
+                        customTier + "#" + pawnName + "  (" +
+                        "AE_ReallocRules_AutoTier".Translate() + ": " + autoTier + ")");
+            }
+            else
+            {
+                l.Label("AE_ReallocRules_CurrentTier".Translate() + ": " + autoTier);
+            }
+
+            // 两按钮并排：设置自定义档次 / 清除自定义
+            Rect tierBtnRect = l.GetRect(30f);
+            float tierBtnWidth = (tierBtnRect.width - 8f) * 0.5f;
+            if (Widgets.ButtonText(new Rect(tierBtnRect.x, tierBtnRect.y, tierBtnWidth, 30f),
+                                   "AE_ReallocRules_SetCustomTier".Translate()))
+            {
+                // 弹出 FloatMenu 选择档次 S/A/B/C/D/X
+                List<FloatMenuOption> tierOptions = new List<FloatMenuOption>();
+                // 倒序展示：S 在最上
+                for (int t = (int)CombatTier.S; t >= (int)CombatTier.X; t--)
+                {
+                    CombatTier localTier = (CombatTier)t;
+                    tierOptions.Add(new FloatMenuOption(
+                        localTier + " - " + ("AE_Tier_" + localTier).Translate(),
+                        () =>
+                        {
+                            AESettings.SetCustomTier(pawnName, localTier);
+                            // 当前 Pawn 显示立即刷新
+                        }));
+                }
+                Find.WindowStack.Add(new FloatMenu(tierOptions));
+            }
+            if (Widgets.ButtonText(new Rect(tierBtnRect.x + tierBtnWidth + 8f, tierBtnRect.y, tierBtnWidth, 30f),
+                                   "AE_ReallocRules_ClearCustomTier".Translate()))
+            {
+                if (hasCustom)
+                {
+                    AESettings.ClearCustomTier(pawnName);
+                }
+            }
+            l.Gap(4f);
+
             // ---- 战斗价值公式 ----
             GUI.color = new Color(0.85f, 0.85f, 0.85f);
             l.Label("AE_ReallocRules_CombatValue".Translate());
@@ -187,6 +246,30 @@ namespace AutoEquipment
             l.CheckboxLabeled("AE_ReallocRules_RespectDrafted".Translate(), ref AESettings.reallocateRespectDrafted);
             l.CheckboxLabeled("AE_ReallocRules_RespectLocked".Translate(), ref AESettings.reallocateRespectLocked);
             l.CheckboxLabeled("AE_ReallocRules_RespectBiocoded".Translate(), ref AESettings.reallocateRespectBiocoded);
+            l.Gap(4f);
+
+            // ---- 护甲偏好规则 ----
+            GUI.color = new Color(0.85f, 0.85f, 0.85f);
+            l.Label("AE_ReallocRules_ArmorPrefSection".Translate());
+            GUI.color = Color.white;
+            Text.Font = GameFont.Tiny;
+            GUI.color = new Color(0.7f, 0.7f, 0.7f);
+            l.Label("AE_ReallocRules_ArmorPref_Desc".Translate());
+            GUI.color = Color.white;
+            Text.Font = GameFont.Small;
+
+            // 当前 Pawn 的护甲偏好
+            ArmorPreference curPref = RoleDetector.GetArmorPreference(comp.CurrentRole);
+            l.Label("AE_ReallocRules_CurrentArmorPref".Translate() + ": " + ("AE_ArmorPref_" + curPref).Translate());
+            l.Gap(4f);
+
+            l.CheckboxLabeled("AE_ReallocRules_ReallocApparel".Translate(), ref AESettings.reallocateApparel);
+            l.Label("  " + "AE_ReallocRules_HeavyThreshold".Translate() + ": " + AESettings.heavyArmorSharpThreshold.ToString("F2"));
+            AESettings.heavyArmorSharpThreshold = l.Slider(AESettings.heavyArmorSharpThreshold, 0.1f, 1.0f);
+            l.Label("  " + "AE_ReallocRules_HeavyPenaltyForLight".Translate() + ": " + AESettings.heavyArmorPenaltyForLight.ToString("F0"));
+            AESettings.heavyArmorPenaltyForLight = l.Slider(AESettings.heavyArmorPenaltyForLight, -2000f, 0f);
+            l.Label("  " + "AE_ReallocRules_LightPenaltyForHeavy".Translate() + ": " + AESettings.lightArmorPenaltyForHeavy.ToString("F0"));
+            AESettings.lightArmorPenaltyForHeavy = l.Slider(AESettings.lightArmorPenaltyForHeavy, -2000f, 0f);
 
             l.End();
 

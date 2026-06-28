@@ -66,6 +66,7 @@ namespace AutoEquipment
         /// 计算 Pawn 的战斗价值分（用于副武器分配优先级与全局重配顺序）。
         /// 公式：战斗价值 = (射击等级×射击兴趣乘数 + 近战等级×近战兴趣乘数) × 技能权重 + Σ特质加分
         /// 兴趣乘数、技能权重、特质加分均可在面板上由玩家调整。
+        /// 命中自定义评级的 Pawn 不走公式，直接采用对应档次的代表分（保证排序稳定）。
         /// </summary>
 
         // 多 degree 特质：ShootingAccuracy 单一 defName，degree 区分乱开枪(-1)/冷枪手(+1)
@@ -76,9 +77,31 @@ namespace AutoEquipment
         private static readonly TraitDef nimbleDef = DefDatabase<TraitDef>.GetNamed("Nimble", false);
         private static readonly TraitDef bloodlustDef = DefDatabase<TraitDef>.GetNamed("Bloodlust", false);
 
+        // 自定义评级档次对应的"代表分"，用于排序时与公式计算值同尺度比较
+        // 设计：自动公式下 D≈0~10，B≈10~30，A≈30~50，S≈50~80
+        // 自定义评级分数取每档中段：D=5, C=15, B=25, A=50, S=80, X=-1
+        // 这样自定义 S 档总能排到自动公式的 S 档之前（同档自定义优先）
+        private static readonly float[] tierRepresentativeScore = new float[]
+        {
+            -1f,   // X
+            5f,    // D
+            15f,   // C
+            25f,   // B
+            50f,   // A
+            80f    // S
+        };
+
         public static float ComputeCombatValue(Pawn pawn)
         {
-            if (pawn?.skills == null) return 0f;
+            if (pawn == null) return 0f;
+
+            // 命中自定义评级：不走公式，直接采用代表分（加 0.5 微量偏向，让自定义档略优先于同档自动）
+            if (AESettings.TryGetCustomTier(GetPawnLookupName(pawn), out CombatTier customTier))
+            {
+                return tierRepresentativeScore[(int)customTier] + 0.5f;
+            }
+
+            if (pawn.skills == null) return 0f;
 
             float total = 0f;
             SkillRecord shooting = pawn.skills.GetSkill(SkillDefOf.Shooting);
@@ -129,8 +152,24 @@ namespace AutoEquipment
         /// 计算 Pawn 的战斗价值档次（用于 DEBUG 显示与重配优先级离散判断）。
         /// 档次与战斗价值公式协同工作：档次用于人眼可读的分级展示，
         /// 战斗价值分数用于精确排序。
+        /// 命中自定义评级的 Pawn 直接采用指定档次，跳过自动判定。
         /// </summary>
         public static CombatTier GetCombatTier(Pawn pawn)
+        {
+            if (pawn == null) return CombatTier.X;
+
+            // 自定义评级优先：玩家可在面板上指定档次，覆盖自动判定
+            if (AESettings.TryGetCustomTier(GetPawnLookupName(pawn), out CombatTier customTier))
+                return customTier;
+
+            return GetAutoCombatTier(pawn);
+        }
+
+        /// <summary>
+        /// 获取自动计算的战斗价值档次（忽略自定义评级覆盖）。
+        /// 供面板显示与"自动档"对比使用。
+        /// </summary>
+        public static CombatTier GetAutoCombatTier(Pawn pawn)
         {
             if (pawn == null) return CombatTier.X;
 
@@ -162,6 +201,17 @@ namespace AutoEquipment
             if (hasCombatTrait) return CombatTier.C;
             // D：无火无特质
             return CombatTier.D;
+        }
+
+        /// <summary>
+        /// 获取用于自定义评级字典的 Pawn 查询键。
+        /// 优先使用 LabelShort（如 "王五"），保留昵称与原名映射。
+        /// </summary>
+        public static string GetPawnLookupName(Pawn pawn)
+        {
+            if (pawn == null) return string.Empty;
+            // LabelShort 包含昵称，对玩家可读且稳定
+            return pawn.LabelShort ?? string.Empty;
         }
 
         /// <summary>

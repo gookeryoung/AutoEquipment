@@ -54,6 +54,23 @@ namespace AutoEquipment
         public static float cvTriggerHappyPenalty = -15f;    // 乱开枪 ShootingAccuracy degree=-1：精度大幅下降
         public static float cvCarefulShooterBonus = 15f;     // 冷枪手 ShootingAccuracy degree=+1：精度提升但冷却慢
 
+        // 全局重配护甲分配
+        // 设计为玩家可调：阈值与偏好规则可调
+        public static bool reallocateApparel = true;            // 是否同时重配护甲（默认开启）
+        public static float heavyArmorSharpThreshold = 0.4f;  // 护甲锐穿 ≥ 此值视为重甲
+        public static float heavyArmorPenaltyForLight = -1000f; // Heavy 偏好角色对轻甲的减分（强制选重甲）
+        public static float lightArmorPenaltyForHeavy = -1000f; // Light 偏好角色对重甲的减分（强制选轻甲）
+
+        // 自定义战斗评级识别码
+        // 设计：玩家可为指定殖民者手动指定档次，跳过自动公式计算
+        //   场景：玩家认为某个 S 档殖民者特别关键，强制锁为 S；
+        //         或某 X 档小人有特殊价值，需提升到 A
+        //   存档载体：List<string>，元素格式 "档次#Pawn名字"，如 "S#王五"
+        //   运行时：解析为 Dictionary<名字, CombatTier> 供快速查询
+        //   命中自定义评级的 Pawn 不再走 ComputeCombatValue 公式，直接采用指定档次
+        public static List<string> customTierEntries = new List<string>();
+        public static Dictionary<string, CombatTier> customTierMap = new Dictionary<string, CombatTier>();
+
         // 调试
         public static bool debugLogging = false;       // 详细日志开关
 
@@ -92,7 +109,17 @@ namespace AutoEquipment
             Scribe_Values.Look(ref cvToughBonus, "cvToughBonus", 30f);
             Scribe_Values.Look(ref cvTriggerHappyPenalty, "cvTriggerHappyPenalty", -15f);
             Scribe_Values.Look(ref cvCarefulShooterBonus, "cvCarefulShooterBonus", 15f);
+            Scribe_Values.Look(ref reallocateApparel, "reallocateApparel", true);
+            Scribe_Values.Look(ref heavyArmorSharpThreshold, "heavyArmorSharpThreshold", 0.4f);
+            Scribe_Values.Look(ref heavyArmorPenaltyForLight, "heavyArmorPenaltyForLight", -1000f);
+            Scribe_Values.Look(ref lightArmorPenaltyForHeavy, "lightArmorPenaltyForHeavy", -1000f);
             Scribe_Values.Look(ref debugLogging, "debugLogging", false);
+
+            // 自定义评级：以 List<string> 作为存档载体（"档次#名字" 格式）
+            // 存档加载后需重建运行时字典
+            Scribe_Collections.Look(ref customTierEntries, "customTierEntries", LookMode.Value);
+            if (customTierEntries == null) customTierEntries = new List<string>();
+            RebuildCustomTierMap();
 
             // 预设方案与监测开关由 GearPolicyEngine/DebugMonitor 持久化
             // 此处委托其存档
@@ -100,6 +127,87 @@ namespace AutoEquipment
             DebugMonitor.ExposeData();
 
             base.ExposeData();
+        }
+
+        /// <summary>
+        /// 重建运行时字典：将 "档次#名字" 列表解析为 Dictionary。
+        /// 在 ExposeData 之后与每次写入后调用，保持运行时数据一致。
+        /// </summary>
+        public static void RebuildCustomTierMap()
+        {
+            customTierMap.Clear();
+            if (customTierEntries == null) return;
+            for (int i = 0; i < customTierEntries.Count; i++)
+            {
+                string entry = customTierEntries[i];
+                if (string.IsNullOrEmpty(entry)) continue;
+
+                int sep = entry.IndexOf('#');
+                if (sep <= 0 || sep >= entry.Length - 1) continue;
+
+                string tierStr = entry.Substring(0, sep);
+                string name = entry.Substring(sep + 1);
+                if (System.Enum.TryParse(tierStr, out CombatTier tier))
+                {
+                    // 同一名字后写覆盖前写
+                    customTierMap[name] = tier;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 设置/更新某 Pawn 的自定义评级。
+        /// 写入会立即更新存档载体与运行时字典。
+        /// </summary>
+        public static void SetCustomTier(string name, CombatTier tier)
+        {
+            if (string.IsNullOrEmpty(name)) return;
+
+            // 移除旧条目
+            for (int i = customTierEntries.Count - 1; i >= 0; i--)
+            {
+                int sep = customTierEntries[i].IndexOf('#');
+                if (sep > 0 && sep < customTierEntries[i].Length - 1
+                    && customTierEntries[i].Substring(sep + 1) == name)
+                {
+                    customTierEntries.RemoveAt(i);
+                }
+            }
+            customTierEntries.Add(tier + "#" + name);
+            customTierMap[name] = tier;
+        }
+
+        /// <summary>
+        /// 清除某 Pawn 的自定义评级，恢复自动判定。
+        /// </summary>
+        public static void ClearCustomTier(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return;
+
+            for (int i = customTierEntries.Count - 1; i >= 0; i--)
+            {
+                int sep = customTierEntries[i].IndexOf('#');
+                if (sep > 0 && sep < customTierEntries[i].Length - 1
+                    && customTierEntries[i].Substring(sep + 1) == name)
+                {
+                    customTierEntries.RemoveAt(i);
+                }
+            }
+            customTierMap.Remove(name);
+        }
+
+        /// <summary>
+        /// 查询某 Pawn 是否有自定义评级。
+        /// 命中时返回 true 并赋值 tier。
+        /// </summary>
+        public static bool TryGetCustomTier(string name, out CombatTier tier)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                tier = CombatTier.X;
+                return false;
+            }
+            return customTierMap.TryGetValue(name, out tier);
         }
 
         public static void DrawSettings(Rect inRect)

@@ -110,4 +110,30 @@
   <AE_ReallocRules_RespectDrafted>Skip drafted colonists</AE_ReallocRules_RespectDrafted>
   <AE_ReallocRules_RespectLocked>Skip locked colonists</AE_ReallocRules_RespectLocked>
   <AE_ReallocRules_RespectBiocoded>Skip biocoded weapons</AE_ReallocRules_RespectBiocoded>
+
+  <!-- Armor preference rules -->
+  <AE_ReallocRules_ArmorPrefSection>Armor Preference Rules</AE_ReallocRules_ArmorPrefSection>
+  <AE_ReallocRules_ArmorPref_Desc>Front-line fighters prefer heavy armor; back-line uses heavy if surplus; workers/hunters/medics use light armor for efficiency</AE_ReallocRules_ArmorPref_Desc>
+  <AE_ReallocRules_CurrentArmorPref>Current role armor preference</AE_ReallocRules_CurrentArmorPref>
+  <AE_ArmorPref_Heavy>Heavy (front)</AE_ArmorPref_Heavy>
+  <AE_ArmorPref_Flexible>Flexible (back)</AE_ArmorPref_Flexible>
+  <AE_ArmorPref_Light>Light (worker)</AE_ArmorPref_Light>
+  <AE_ReallocRules_ReallocApparel>Also reallocate apparel</AE_ReallocRules_ReallocApparel>
+  <AE_ReallocRules_HeavyThreshold>Heavy armor threshold (ArmorRating_Sharp >=)</AE_ReallocRules_HeavyThreshold>
+  <AE_ReallocRules_HeavyPenaltyForLight>Heavy-pref role penalty on light armor</AE_ReallocRules_HeavyPenaltyForLight>
+  <AE_ReallocRules_LightPenaltyForHeavy>Light-pref role penalty on heavy armor</AE_ReallocRules_LightPenaltyForHeavy>
+
+  <!-- Custom tier override -->
+  <AE_ReallocRules_CustomTier>Custom Tier Code</AE_ReallocRules_CustomTier>
+  <AE_ReallocRules_CustomTier_Desc>Manually assign a tier for this colonist, bypassing auto formula and assigning high-value gear by tier. In DEBUG mode the label shows the code (e.g. [S#John]).</AE_ReallocRules_CustomTier_Desc>
+  <AE_ReallocRules_CurrentTier>Current tier</AE_ReallocRules_CurrentTier>
+  <AE_ReallocRules_AutoTier>Auto</AE_ReallocRules_AutoTier>
+  <AE_ReallocRules_SetCustomTier>Set Custom Tier</AE_ReallocRules_SetCustomTier>
+  <AE_ReallocRules_ClearCustomTier>Clear Custom</AE_ReallocRules_ClearCustomTier>
+  <AE_Tier_S>S: dual-passion with trait (top)</AE_Tier_S>
+  <AE_Tier_A>A: dual-passion</AE_Tier_A>
+  <AE_Tier_B>B: single-passion</AE_Tier_B>
+  <AE_Tier_C>C: no passion but has trait</AE_Tier_C>
+  <AE_Tier_D>D: no passion no trait</AE_Tier_D>
+  <AE_Tier_X>X: incapable of violence</AE_Tier_X>
 </LanguageData>

@@ -110,4 +110,30 @@
   <AE_ReallocRules_RespectDrafted>跳过征召中的殖民者</AE_ReallocRules_RespectDrafted>
   <AE_ReallocRules_RespectLocked>跳过已锁定的殖民者</AE_ReallocRules_RespectLocked>
   <AE_ReallocRules_RespectBiocoded>跳过生物编码武器</AE_ReallocRules_RespectBiocoded>
+
+  <!-- 护甲偏好规则 -->
+  <AE_ReallocRules_ArmorPrefSection>护甲偏好规则</AE_ReallocRules_ArmorPrefSection>
+  <AE_ReallocRules_ArmorPref_Desc>前排战士优先重甲；后排有重甲盈余时考虑重甲；工人/猎人/医疗使用轻甲以提高工作效率</AE_ReallocRules_ArmorPref_Desc>
+  <AE_ReallocRules_CurrentArmorPref>当前角色护甲偏好</AE_ReallocRules_CurrentArmorPref>
+  <AE_ArmorPref_Heavy>重甲（前排）</AE_ArmorPref_Heavy>
+  <AE_ArmorPref_Flexible>自由（后排）</AE_ArmorPref_Flexible>
+  <AE_ArmorPref_Light>轻甲（工人）</AE_ArmorPref_Light>
+  <AE_ReallocRules_ReallocApparel>同时重配护甲</AE_ReallocRules_ReallocApparel>
+  <AE_ReallocRules_HeavyThreshold>重甲判定阈值（ArmorRating_Sharp ≥）</AE_ReallocRules_HeavyThreshold>
+  <AE_ReallocRules_HeavyPenaltyForLight>Heavy 偏好角色对轻甲减分</AE_ReallocRules_HeavyPenaltyForLight>
+  <AE_ReallocRules_LightPenaltyForHeavy>Light 偏好角色对重甲减分</AE_ReallocRules_LightPenaltyForHeavy>
+
+  <!-- 自定义评级识别码 -->
+  <AE_ReallocRules_CustomTier>自定义评级识别码</AE_ReallocRules_CustomTier>
+  <AE_ReallocRules_CustomTier_Desc>为该殖民者手动指定档次，跳过自动公式计算，直接按对应等级优先分配高价值装备。DEBUG 模式下名字后会显示识别码（如 [S#王五]）。</AE_ReallocRules_CustomTier_Desc>
+  <AE_ReallocRules_CurrentTier>当前档次</AE_ReallocRules_CurrentTier>
+  <AE_ReallocRules_AutoTier>自动档</AE_ReallocRules_AutoTier>
+  <AE_ReallocRules_SetCustomTier>设置自定义档次</AE_ReallocRules_SetCustomTier>
+  <AE_ReallocRules_ClearCustomTier>清除自定义</AE_ReallocRules_ClearCustomTier>
+  <AE_Tier_S>S：双火带特质（最高）</AE_Tier_S>
+  <AE_Tier_A>A：双火</AE_Tier_A>
+  <AE_Tier_B>B：单火</AE_Tier_B>
+  <AE_Tier_C>C：无火有特质</AE_Tier_C>
+  <AE_Tier_D>D：无火无特质</AE_Tier_D>
+  <AE_Tier_X>X：无法从事暴力活动</AE_Tier_X>
 </LanguageData>
