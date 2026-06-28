@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -103,6 +104,12 @@ namespace AutoEquipment
                 Messages.Message("AE_DebugCleanGhoulsResult".Translate(cleaned), MessageTypeDefOf.TaskCompletion);
             }
 
+            // 立即换装：点击后弹出菜单选择目标类型，再选择角色筛选
+            if (l.ButtonText("AE_DebugReload".Translate()))
+            {
+                Find.WindowStack.Add(new ReloadTargetMenu());
+            }
+
             l.End();
         }
     }
@@ -122,5 +129,133 @@ namespace AutoEquipment
         }
 
         public override string SettingsCategory() => "AE_SettingsCategory".Translate();
+    }
+
+    /// <summary>
+    /// 立即换装第一步菜单：选择换装目标类型。
+    /// 选择后再弹出角色筛选菜单。
+    /// </summary>
+    public class ReloadTargetMenu : Window
+    {
+        public override Vector2 InitialSize => new Vector2(280f, 320f);
+
+        public ReloadTargetMenu()
+        {
+            doCloseX = true;
+            closeOnClickedOutside = true;
+            absorbInputAroundWindow = true;
+            forcePause = false;
+        }
+
+        public override void DoWindowContents(Rect inRect)
+        {
+            Listing_Standard l = new Listing_Standard();
+            l.Begin(inRect);
+
+            Text.Font = GameFont.Medium;
+            l.Label("AE_DebugReload".Translate());
+            Text.Font = GameFont.Small;
+            l.Gap();
+
+            l.Label("AE_DebugReload_Target".Translate());
+            l.Gap(4f);
+
+            // 目标类型列表
+            var targets = new[]
+            {
+                CompGearManager.ReloadTarget.All,
+                CompGearManager.ReloadTarget.Weapon,
+                CompGearManager.ReloadTarget.Apparel,
+                CompGearManager.ReloadTarget.Sidearm,
+                CompGearManager.ReloadTarget.Inventory
+            };
+
+            for (int i = 0; i < targets.Length; i++)
+            {
+                // 闭包捕获：必须用局部变量，避免循环变量全部指向最后一个枚举值
+                CompGearManager.ReloadTarget localTarget = targets[i];
+                string labelKey = "AE_DebugReload_Target_" + localTarget;
+                if (l.ButtonText(labelKey.Translate()))
+                {
+                    Close();
+                    Find.WindowStack.Add(new ReloadRoleMenu(localTarget));
+                }
+            }
+
+            l.End();
+        }
+    }
+
+    /// <summary>
+    /// 立即换装第二步菜单：选择角色筛选。
+    /// 选择后立即触发换装并显示结果消息。
+    /// </summary>
+    public class ReloadRoleMenu : Window
+    {
+        private readonly CompGearManager.ReloadTarget target;
+
+        public override Vector2 InitialSize => new Vector2(280f, 360f);
+
+        public ReloadRoleMenu(CompGearManager.ReloadTarget target)
+        {
+            this.target = target;
+            doCloseX = true;
+            closeOnClickedOutside = true;
+            absorbInputAroundWindow = true;
+            forcePause = false;
+        }
+
+        public override void DoWindowContents(Rect inRect)
+        {
+            Listing_Standard l = new Listing_Standard();
+            l.Begin(inRect);
+
+            Text.Font = GameFont.Medium;
+            l.Label("AE_DebugReload".Translate());
+            Text.Font = GameFont.Small;
+            l.Gap();
+
+            // 显示当前选择的目标类型
+            l.Label("AE_DebugReload_CurrentTarget".Translate(
+                ("AE_DebugReload_Target_" + target).Translate()));
+            l.Gap();
+
+            l.Label("AE_DebugReload_Role".Translate());
+            l.Gap(4f);
+
+            // 角色筛选列表（Default 表示"全部"，不筛选）
+            var roles = new[]
+            {
+                Role.Default,    // 全部
+                Role.Shooter,
+                Role.Brawler,
+                Role.Doctor,
+                Role.Hunter,
+                Role.Worker,
+                Role.Pacifist
+            };
+
+            for (int i = 0; i < roles.Length; i++)
+            {
+                // 闭包捕获
+                Role localRole = roles[i];
+                string labelKey = localRole == Role.Default
+                    ? "AE_DebugReload_Role_All"
+                    : ("AE_Role_" + localRole);
+                if (l.ButtonText(labelKey.Translate()))
+                {
+                    Close();
+                    int triggered = CompGearManager.TriggerReload(target, localRole);
+                    Messages.Message(
+                        "AE_DebugReloadResult".Translate(
+                            ("AE_DebugReload_Target_" + target).Translate(),
+                            labelKey.Translate(),
+                            triggered),
+                        MessageTypeDefOf.TaskCompletion);
+                }
+            }
+
+            l.End();
+        }
     }
 }

@@ -284,6 +284,96 @@ namespace AutoEquipment
             return cleaned;
         }
 
+        // ===================== 手动触发换装 =====================
+
+        /// <summary>
+        /// 换装目标类型：决定强制评估哪一类装备。
+        /// </summary>
+        public enum ReloadTarget
+        {
+            All,        // 武器+防具+副武器+库存
+            Weapon,     // 仅主武器
+            Apparel,    // 仅防具
+            Sidearm,    // 仅副武器
+            Inventory   // 仅库存（药品）
+        }
+
+        /// <summary>
+        /// 实例级强制评估：忽略情境变化与冷却，立即按当前 role/context 评估指定类型。
+        /// 用于调试按钮即时验证评分逻辑。
+        /// </summary>
+        public void ForceEvaluate(ReloadTarget target)
+        {
+            if (Pawn == null || Pawn.Dead || Pawn.Map == null) return;
+            if (DLCCompat.IsGhoul(Pawn)) return;
+
+            try
+            {
+                Role role = CurrentRole;
+                GearContext context = ContextDetector.GetContext(Pawn);
+                lastContext = context;
+
+                switch (target)
+                {
+                    case ReloadTarget.Weapon:
+                        EvaluateWeapon(role, context, true);
+                        break;
+                    case ReloadTarget.Apparel:
+                        EvaluateApparel(role, context, true);
+                        break;
+                    case ReloadTarget.Sidearm:
+                        EvaluateSidearm(role);
+                        break;
+                    case ReloadTarget.Inventory:
+                        EvaluateInventory(role);
+                        break;
+                    case ReloadTarget.All:
+                        EvaluateWeapon(role, context, true);
+                        EvaluateApparel(role, context, true);
+                        EvaluateSidearm(role);
+                        EvaluateInventory(role);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorOnce("[AutoEquipment] 手动换装失败 " + Pawn.LabelShort + ": " + ex.Message,
+                    Pawn.thingIDNumber ^ 0x5349);
+            }
+        }
+
+        /// <summary>
+        /// 全局手动触发换装：遍历所有地图的玩家阵营殖民者，
+        /// 按角色筛选后强制评估指定类型的装备。
+        /// 返回被触发的 Pawn 数量。
+        /// </summary>
+        public static int TriggerReload(ReloadTarget target, Role roleFilter)
+        {
+            int triggered = 0;
+            foreach (Map map in Find.Maps)
+            {
+                foreach (Pawn pawn in map.mapPawns.FreeColonistsAndPrisonersSpawned)
+                {
+                    if (pawn.Dead || pawn.Downed) continue;
+                    if (pawn.Faction != Faction.OfPlayer) continue;
+                    if (DLCCompat.IsGhoul(pawn)) continue;
+
+                    var comp = pawn.GetComp<CompGearManager>();
+                    if (comp == null) continue;
+
+                    // 角色筛选：All 表示不筛选
+                    if (roleFilter != Role.Default
+                        && comp.CurrentRole != roleFilter)
+                        continue;
+
+                    comp.ForceEvaluate(target);
+                    triggered++;
+                }
+            }
+            Log.Message($"[AutoEquipment] 手动换装触发完成：target={target}, roleFilter={roleFilter}, 触发 {triggered} 个殖民者");
+            return triggered;
+        }
+
         // ===================== 异常装备修复 =====================
 
         /// <summary>
