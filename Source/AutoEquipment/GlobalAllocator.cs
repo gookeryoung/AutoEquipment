@@ -6,19 +6,20 @@ using Verse.AI;
 namespace AutoEquipment
 {
     /// <summary>
-    /// 全局重配：真正的"全局"分配语义。
+    /// 全局装备重配：真正的"全局"分配语义。
     ///
     /// 设计目的：
     /// - 高战斗价值殖民者优先获取高价值武器
     /// - 无火小人手里的好武器会被释放给双火小人
+    /// - 高评级殖民者优先获得高价值护甲，且匹配角色偏好（重甲/轻甲）
     ///
     /// 流程：
     /// 1. 收集所有非征召、非锁定殖民者，按战斗价值降序排序
-    /// 2. 第一遍：所有殖民者放下当前武器到地上（进入地图候选池）
-    ///    跳过征召中、生物编码武器（个人绑定不可释放）
-    /// 3. 第二遍：按战斗价值降序，为每个殖民者从地图候选池评分选最佳武器
-    ///    已分配的武器从候选池移除，避免重复抢占
-    /// 4. 服装/副武器/库存仍用 ForceEvaluate（按单 Pawn 评估即可）
+    /// 2. 武器重配：放下所有武器到地上，按战斗价值降序贪婪分配最佳武器
+    /// 3. 护甲重配：放下所有护甲到地上，按护甲内在价值降序逐件分配
+    ///    每件护甲分配给"评分最高"的殖民者（评分含角色偏好匹配奖励 + 评级权重）
+    ///    避免高评级 Flexible 殖民者抢占 Heavy 殖民者急需的重甲
+    /// 4. 副武器与库存仍用 ForceEvaluate（按单 Pawn 评估即可）
     ///
     /// 战斗价值复用 SidearmAllocator.ComputeCombatValue：
     /// 射击等级 × 兴趣乘数 + 近战等级 × 兴趣乘数
@@ -215,20 +216,24 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 护甲重配：放下所有殖民者护甲，按战斗价值降序 + 角色护甲偏好重新分配。
-        /// - Heavy 偏好角色（前排战士）：优先选重甲
-        /// - Flexible 偏好角色（后排）：按原评分自由选择
-        /// - Light 偏好角色（工人/猎人等）：优先选轻甲以提高工作效率
+        /// 护甲重配：放下所有殖民者护甲，按护甲内在价值降序逐件分配给最需要的殖民者。
+        ///
+        /// 算法改进（修复"高评级没拿到好护甲"Bug）：
+        /// 旧算法：按 Pawn 战斗价值降序，每个 Pawn 贪婪填满所有护甲槽位。
+        ///   问题：S 级（Flexible 偏好）会先拿走重甲，导致 A 级（Heavy 偏好）无重甲可用。
+        /// 新算法：按护甲内在价值降序，每件护甲分配给"评分最高"的殖民者。
+        ///   评分 = GearScorer.ScoreApparel + 角色偏好匹配奖励 + 评级权重
+        ///   - 角色偏好匹配奖励：Heavy 偏好+重甲 = +matchBonus，Light 偏好+轻甲 = +matchBonus
+        ///     让匹配偏好的殖民者天然胜过 Flexible 偏好
+        ///   - 评级权重：同分时高评级优先（权重小，仅打破平局）
         /// </summary>
         private static void ReallocateApparel()
         {
-            // 护甲分配按"全局价值评级"（CombatTier）降序，与武器分配解耦：
-            // 武器分配用 ComputeCombatValue（射击/格斗维度）排序；
-            // 护甲分配用 GetCombatTier（包含生产/社交/特质等全局价值）排序，
-            // 高评级殖民者优先获得价值最高的护甲。
+            // 护甲分配按"全局价值评级"（CombatTier）降序，与武器分配解耦
             sortedPawns.Sort(ComparePawnByCombatTierDesc);
+
             // ========== 第一遍：放下所有殖民者的当前护甲 ==========
-            // 复用"放下当前武器"开关语义：放下所有护甲进入地图候选池，让低价值小人手里的好护甲可被高价值小人拾取
+            // 复用"放下当前武器"开关语义：放下所有护甲进入地图候选池
             int droppedApparelCount = 0;
             if (AESettings.reallocateDropWeapons)
             {
@@ -273,92 +278,124 @@ namespace AutoEquipment
                 }
             }
 
-            // ========== 第二遍：按战斗价值降序 + 角色偏好分配 ==========
-            // 每个 Pawn 循环分配，直到无可用护甲或所有候选都已分配
-            for (int i = 0; i < sortedPawns.Count; i++)
+            // ========== 按护甲内在价值降序排序 ==========
+            // 让高价值护甲优先分配，确保好护甲落到最需要的殖民者手里
+            candidateApparels.Sort(CompareApparelByIntrinsicValueDesc);
+
+            // ========== 逐件分配：每件护甲分配给评分最高的殖民者 ==========
+            // 关键改进：避免 S 级 Flexible 殖民者贪婪抢占重甲，
+            // 让 Heavy 偏好殖民者通过匹配奖励自然获得重甲
+            int totalAssigned = 0;
+            for (int j = 0; j < candidateApparels.Count; j++)
             {
-                Pawn pawn = sortedPawns[i];
-                if (pawn.Map == null) continue;
+                Apparel ap = candidateApparels[j];
+                if (ap == null) continue;
+                if (assignedApparelIds.Contains(ap.thingIDNumber)) continue;
 
-                CompGearManager comp = pawn.GetComp<CompGearManager>();
-                if (comp == null) continue;
+                Pawn bestPawn = null;
+                float bestScore = float.MinValue;
+                int bestPawnTier = -1;
 
-                Role role = comp.CurrentRole;
-                GearContext context = ContextDetector.GetContext(pawn);
-                ArmorPreference pref = RoleDetector.GetArmorPreference(role);
-
-                // 循环分配，直到该 Pawn 无可分配的护甲
-                int assignedThisLoop = 0;
-                while (true)
+                for (int i = 0; i < sortedPawns.Count; i++)
                 {
-                    Apparel best = null;
-                    float bestScore = float.MinValue;
-                    int bestIdx = -1;
+                    Pawn pawn = sortedPawns[i];
+                    if (pawn.Map == null) continue;
+                    if (pawn.Dead || pawn.Downed) continue;
 
-                    for (int j = 0; j < candidateApparels.Count; j++)
+                    CompGearManager comp = pawn.GetComp<CompGearManager>();
+                    if (comp == null) continue;
+
+                    // 检查可达性、保留、禁止
+                    if (ap.IsForbidden(pawn)) continue;
+                    if (!pawn.CanReserve(ap) || !pawn.CanReach(ap, PathEndMode.ClosestTouch, Danger.Some)) continue;
+
+                    // 检查可穿戴：身体部位 + 不与已穿戴护甲冲突
+                    if (!ApparelUtility.HasPartsToWear(pawn, ap.def)) continue;
+
+                    bool conflict = false;
+                    List<Apparel> worn = pawn.apparel.WornApparel;
+                    for (int k = 0; k < worn.Count; k++)
                     {
-                        Apparel ap = candidateApparels[j];
-                        if (ap == null) continue;
-                        if (assignedApparelIds.Contains(ap.thingIDNumber)) continue;
-                        if (ap.IsForbidden(pawn)) continue;
-                        if (!pawn.CanReserve(ap) || !pawn.CanReach(ap, PathEndMode.ClosestTouch, Danger.Some)) continue;
-
-                        // Pawn 是否可穿戴：有可穿戴的身体部位，且不与已穿戴护甲冲突
-                        if (!ApparelUtility.HasPartsToWear(pawn, ap.def)) continue;
-
-                        bool conflict = false;
-                        List<Apparel> worn = pawn.apparel.WornApparel;
-                        for (int k = 0; k < worn.Count; k++)
+                        if (!ApparelUtility.CanWearTogether(worn[k].def, ap.def, pawn.RaceProps.body))
                         {
-                            if (!ApparelUtility.CanWearTogether(worn[k].def, ap.def, pawn.RaceProps.body))
-                            {
-                                conflict = true;
-                                break;
-                            }
-                        }
-                        if (conflict) continue;
-
-                        // 评分
-                        float score = GearScorer.ScoreApparel(pawn, ap, role, context);
-
-                        // 根据护甲偏好调整
-                        // 重甲判定：ArmorRating_Sharp ≥ 阈值
-                        float armorSharp = ap.GetStatValue(StatDefOf.ArmorRating_Sharp);
-                        bool isHeavy = armorSharp >= AESettings.heavyArmorSharpThreshold;
-
-                        if (pref == ArmorPreference.Heavy && !isHeavy)
-                            score += AESettings.heavyArmorPenaltyForLight;
-                        else if (pref == ArmorPreference.Light && isHeavy)
-                            score += AESettings.lightArmorPenaltyForHeavy;
-                        // Flexible 不调整
-
-                        if (score > bestScore)
-                        {
-                            bestScore = score;
-                            best = ap;
-                            bestIdx = j;
+                            conflict = true;
+                            break;
                         }
                     }
+                    if (conflict) continue;
 
-                    // 无可用护甲或评分过低（< 0 表示该护甲不适合此 Pawn）时停止
-                    if (best == null || bestScore <= 0f) break;
+                    Role role = comp.CurrentRole;
+                    GearContext context = ContextDetector.GetContext(pawn);
+                    ArmorPreference pref = RoleDetector.GetArmorPreference(role);
 
-                    assignedApparelIds.Add(best.thingIDNumber);
-                    candidateApparels[bestIdx] = null;
+                    // 基础评分
+                    float score = GearScorer.ScoreApparel(pawn, ap, role, context);
 
-                    // 创建 Wear job
-                    var job = JobMaker.MakeJob(JobDefOf.Wear, best);
-                    pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+                    // 重甲判定：ArmorRating_Sharp ≥ 阈值
+                    float armorSharp = ap.GetStatValue(StatDefOf.ArmorRating_Sharp);
+                    bool isHeavy = armorSharp >= AESettings.heavyArmorSharpThreshold;
 
-                    assignedThisLoop++;
-                    Log.Message($"[AutoEquipment] 全局重配护甲 #{i + 1}.{assignedThisLoop}: {AEDebug.Label(pawn)} [{pref}] ← {best.LabelShort} (score={bestScore:F1})");
+                    // 角色偏好调整：
+                    // - Heavy 偏好 + 轻甲：大惩罚（-1000，硬否决）
+                    // - Light 偏好 + 重甲：大惩罚（-1000，硬否决）
+                    // - Heavy 偏好 + 重甲：匹配奖励（+50，让 Heavy 天然胜过 Flexible）
+                    // - Light 偏好 + 轻甲：匹配奖励（+50，让 Light 天然胜过 Flexible）
+                    // - Flexible：无调整（既不奖励也不惩罚）
+                    // 设计意图：匹配偏好的殖民者优先获得对应类型护甲，
+                    //   避免 Flexible 殖民者抢走 Heavy 殖民者急需的重甲
+                    if (pref == ArmorPreference.Heavy && !isHeavy)
+                        score += AESettings.heavyArmorPenaltyForLight;
+                    else if (pref == ArmorPreference.Light && isHeavy)
+                        score += AESettings.lightArmorPenaltyForHeavy;
+                    else if ((pref == ArmorPreference.Heavy && isHeavy)
+                             || (pref == ArmorPreference.Light && !isHeavy))
+                        score += 50f;  // 匹配奖励
+
+                    // 评级权重：同分时高评级优先
+                    // 0.5 分/档：足够打破平局，但远小于匹配奖励(50)与惩罚(1000)
+                    CombatTier pawnTier = SidearmAllocator.GetCombatTier(pawn);
+                    score += (float)pawnTier * 0.5f;
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestPawn = pawn;
+                        bestPawnTier = (int)pawnTier;
+                    }
                 }
 
-                if (assignedThisLoop == 0)
+                // 评分过低（≤ 0）表示无殖民者适合此护甲，跳过
+                if (bestPawn != null && bestScore > 0f)
                 {
-                    Log.Message($"[AutoEquipment] 全局重配护甲 #{i + 1}: {AEDebug.Label(pawn)} [{pref}] 无可分配护甲");
+                    assignedApparelIds.Add(ap.thingIDNumber);
+                    candidateApparels[j] = null;
+
+                    var job = JobMaker.MakeJob(JobDefOf.Wear, ap);
+                    bestPawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+
+                    totalAssigned++;
+                    Log.Message($"[AutoEquipment] 全局重配护甲 #{totalAssigned}: {AEDebug.Label(bestPawn)} ← {ap.LabelShort} (score={bestScore:F1})");
                 }
             }
+
+            Log.Message($"[AutoEquipment] 全局重配护甲完成: 共分配 {totalAssigned} 件护甲");
+        }
+
+        /// <summary>
+        /// 按护甲内在价值（锐器护甲 + 钝器护甲×0.5）降序比较。
+        /// 用于让高价值护甲优先进入分配流程。
+        /// </summary>
+        private static int CompareApparelByIntrinsicValueDesc(Apparel a, Apparel b)
+        {
+            if (a == null && b == null) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+
+            float va = a.GetStatValue(StatDefOf.ArmorRating_Sharp)
+                     + a.GetStatValue(StatDefOf.ArmorRating_Blunt) * 0.5f;
+            float vb = b.GetStatValue(StatDefOf.ArmorRating_Sharp)
+                     + b.GetStatValue(StatDefOf.ArmorRating_Blunt) * 0.5f;
+            return vb.CompareTo(va);
         }
 
         private static int ComparePawnByCombatValueDesc(Pawn a, Pawn b)

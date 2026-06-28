@@ -87,9 +87,9 @@
   <AE_Monitor_Breakdown>Score breakdown</AE_Monitor_Breakdown>
   <AE_Monitor_Comparison>Score comparison</AE_Monitor_Comparison>
 
-  <!-- Global reallocate -->
-  <AE_GlobalReallocate>Global Reallocate</AE_GlobalReallocate>
-  <AE_GlobalReallocateResult>Triggered global reallocation for {0} colonists by combat value</AE_GlobalReallocateResult>
+  <!-- Global gear reallocate -->
+  <AE_GlobalReallocate>Global Gear Reallocate</AE_GlobalReallocate>
+  <AE_GlobalReallocateResult>Triggered global gear reallocation for {0} colonists by combat value</AE_GlobalReallocateResult>
 
   <!-- Global tier tag on pawn names -->
   <AE_GlobalTierTag>Global Tier Tag</AE_GlobalTierTag>
@@ -146,4 +146,17 @@
   <AE_Tier_C>C: no passion but has trait</AE_Tier_C>
   <AE_Tier_D>D: no passion no trait</AE_Tier_D>
   <AE_Tier_X>X: incapable of violence</AE_Tier_X>
+
+  <!-- Panel status badges -->
+  <AE_Badge_CombatValue>Combat Value</AE_Badge_CombatValue>
+  <AE_Badge_PawnValue>Pawn Value</AE_Badge_PawnValue>
+  <AE_Badge_ArmorPref>Armor Pref</AE_Badge_ArmorPref>
+  <AE_Badge_Tier>Tier</AE_Badge_Tier>
+  <AE_Badge_Role>Role</AE_Badge_Role>
+  <AE_Badge_Context>Context</AE_Badge_Context>
+  <AE_Badge_Weapon>Weapon</AE_Badge_Weapon>
+  <AE_Badge_Apparel>Apparel</AE_Badge_Apparel>
+  <AE_Badge_Status>Status</AE_Badge_Status>
+  <AE_Badge_Locked>Locked</AE_Badge_Locked>
+  <AE_Badge_Unlocked>Unlocked</AE_Badge_Unlocked>
 </LanguageData>

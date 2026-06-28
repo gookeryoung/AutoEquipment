@@ -87,9 +87,9 @@
   <AE_Monitor_Breakdown>评分明细</AE_Monitor_Breakdown>
   <AE_Monitor_Comparison>评分对比</AE_Monitor_Comparison>
 
-  <!-- 全局重配 -->
-  <AE_GlobalReallocate>全局重配</AE_GlobalReallocate>
-  <AE_GlobalReallocateResult>已按战斗价值降序触发 {0} 个殖民者的全局重配</AE_GlobalReallocateResult>
+  <!-- 全局装备重配 -->
+  <AE_GlobalReallocate>全局装备重配</AE_GlobalReallocate>
+  <AE_GlobalReallocateResult>已按战斗价值降序触发 {0} 个殖民者的全局装备重配</AE_GlobalReallocateResult>
 
   <!-- 全局人物评级标签 -->
   <AE_GlobalTierTag>全局人物评级</AE_GlobalTierTag>
@@ -146,4 +146,17 @@
   <AE_Tier_C>C：无火有特质</AE_Tier_C>
   <AE_Tier_D>D：无火无特质</AE_Tier_D>
   <AE_Tier_X>X：无法从事暴力活动</AE_Tier_X>
+
+  <!-- 面板状态徽章 -->
+  <AE_Badge_CombatValue>战斗价值</AE_Badge_CombatValue>
+  <AE_Badge_PawnValue>价值评分</AE_Badge_PawnValue>
+  <AE_Badge_ArmorPref>护甲偏好</AE_Badge_ArmorPref>
+  <AE_Badge_Tier>评级</AE_Badge_Tier>
+  <AE_Badge_Role>角色</AE_Badge_Role>
+  <AE_Badge_Context>情境</AE_Badge_Context>
+  <AE_Badge_Weapon>武器</AE_Badge_Weapon>
+  <AE_Badge_Apparel>护甲</AE_Badge_Apparel>
+  <AE_Badge_Status>状态</AE_Badge_Status>
+  <AE_Badge_Locked>已锁定</AE_Badge_Locked>
+  <AE_Badge_Unlocked>未锁定</AE_Badge_Unlocked>
 </LanguageData>
