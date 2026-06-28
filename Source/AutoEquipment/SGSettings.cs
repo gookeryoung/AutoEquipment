@@ -111,6 +111,6 @@ namespace AutoEquipment
             AESettings.DrawSettings(inRect);
         }
 
-        public override string SettingsCategory() => "Auto Equipment";
+        public override string SettingsCategory() => "AE_SettingsCategory".Translate();
     }
 }

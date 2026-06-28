@@ -3,6 +3,7 @@
   <!-- Tab -->
   <AE_Tab>Auto Equipment</AE_Tab>
   <AE_TabTitle>Auto Equipment</AE_TabTitle>
+  <AE_SettingsCategory>Auto Equipment</AE_SettingsCategory>
 
   <!-- Roles -->
   <AE_Role_Default>Default</AE_Role_Default>
