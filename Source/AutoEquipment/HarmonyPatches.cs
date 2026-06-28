@@ -25,31 +25,28 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 新游戏开始时为所有 Pawn 类型 ThingDef 注入装备管理组件。
-        /// 运行时机：游戏初始化，避免修改原始 XML，运行时遍历 DefDatabase 添加。
+        /// Pawn 生成到地图时的 Postfix：检查并补注入 CompGearManager 实例。
+        /// 关键：RimWorld 加载存档时不会根据 ThingDef.comps 重新创建已存 Pawn 的 comps，
+        /// 必须在 Pawn.SpawnSetup 时运行时检查并注入。
+        /// 此 Postfix 覆盖所有 Pawn 生成场景：新游戏、加载存档、运行时生成。
         /// </summary>
-        [HarmonyPatch(typeof(Verse.Game), "InitNewGame")]
-        public static class Game_InitNewGame_Patch
+        [HarmonyPatch(typeof(Pawn), "SpawnSetup")]
+        public static class Pawn_SpawnSetup_Patch
         {
-            static void Postfix()
+            static void Postfix(Pawn __instance)
             {
-                AddCompToPawnDefs();
-                AddCompToExistingPawns();
-            }
-        }
+                // 食尸鬼不参与装备管理，跳过
+                if (DLCCompat.IsGhoul(__instance)) return;
 
-        /// <summary>
-        /// 加载存档时同样注入组件，并给已存在的 Pawn 补注入 ThingComp 实例。
-        /// 关键：ThingDef.comps 注入只影响"后续生成"的 Pawn，
-        /// 已存在于存档中的 Pawn 不会自动获得新 ThingComp，必须运行时补注入。
-        /// </summary>
-        [HarmonyPatch(typeof(ScribeLoader), "LoadGame")]
-        public static class ScribeLoader_LoadGame_Patch
-        {
-            static void Postfix()
-            {
-                AddCompToPawnDefs();
-                AddCompToExistingPawns();
+                // 已有组件则跳过，避免重复注入
+                if (__instance.GetComp<CompGearManager>() != null) return;
+
+                // 运行时创建 ThingComp 实例并注入
+                // 复现 Pawn.AddComps 的标准流程：创建实例 -> 设 parent -> 加入 AllComps -> Initialize
+                var comp = new CompGearManager();
+                comp.parent = __instance;
+                __instance.AllComps.Add(comp);
+                comp.Initialize(new CompProperties_GearManager());
             }
         }
 
@@ -102,49 +99,18 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 给地图上已存在的 Pawn 补注入 CompGearManager 实例。
-        /// 用途：旧存档加载时，Pawn 是基于"注入前"的 ThingDef 生成的，
-        /// 不会自动获得新 ThingComp。此方法遍历所有 Pawn，对缺失组件者补注入。
-        /// 时机：存档加载完成（ScribeLoader.LoadGame Postfix）。
-        /// </summary>
-        public static void AddCompToExistingPawns()
-        {
-            int injected = 0;
-            int already = 0;
-
-            foreach (Map map in Find.Maps)
-            {
-                foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned)
-                {
-                    // 已有组件则跳过
-                    if (pawn.GetComp<CompGearManager>() != null) { already++; continue; }
-
-                    // 食尸鬼不参与装备管理，跳过
-                    if (DLCCompat.IsGhoul(pawn)) continue;
-
-                    // 运行时创建 ThingComp 实例并注入
-                    // 复现 Pawn.AddComps 的标准流程：创建实例 -> 设 parent -> 加入 AllComps -> Initialize
-                    var comp = new CompGearManager();
-                    comp.parent = pawn;
-                    pawn.AllComps.Add(comp);
-                    comp.Initialize(new CompProperties_GearManager());
-                    injected++;
-                }
-            }
-            Log.Message($"[AutoEquipment] 已存在 Pawn 组件补注入: 新增={injected}, 已存在={already}");
-        }
-
-        /// <summary>
         /// 取消征召时的 Postfix：若 Pawn 此前为应对近战切出了副武器，
         /// 则恢复其主武器。食尸鬼不使用装备管理，直接跳过。
+        /// RimWorld 1.6 起 Pawn_DraftController.SetDrafted 已改为 Drafted 属性，
+        /// 改用 MethodType.Setter patch 属性 setter。
         /// </summary>
-        [HarmonyPatch(typeof(Pawn_DraftController), "SetDrafted")]
+        [HarmonyPatch(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted), MethodType.Setter)]
         public static class DraftController_SetDrafted_Patch
         {
-            static void Postfix(Pawn_DraftController __instance, bool drafted)
+            static void Postfix(Pawn_DraftController __instance, bool value)
             {
-                // 仅处理「取消征召」事件，征召时无需干预
-                if (drafted) return;
+                // 仅处理「取消征召」事件（value=false 时为取消征召）
+                if (value) return;
                 Pawn pawn = __instance.pawn;
                 if (pawn == null) return;
 
