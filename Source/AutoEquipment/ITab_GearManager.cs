@@ -26,15 +26,17 @@ namespace AutoEquipment
             get
             {
                 Pawn pawn = SelPawn as Pawn;
+
                 return pawn != null
                     && pawn.Faction == Faction.OfPlayer
-                    && !pawn.IsGhoul; // Don't show tab for ghouls
+                    && !DLCCompat.IsGhoul(pawn); // 食尸鬼不显示装备管理面板
             }
         }
 
         protected override void FillTab()
         {
             Pawn pawn = SelPawn as Pawn;
+
             if (pawn == null) return;
 
             var comp = pawn.GetComp<CompGearManager>();

@@ -82,8 +82,9 @@ namespace AutoEquipment
                 if (drafted) return;
                 Pawn pawn = __instance.pawn;
                 if (pawn == null) return;
-                // FIX: Ghouls don't use CompGearManager, skip them
-                if (pawn.IsGhoul) return;
+
+                // 食尸鬼不使用 CompGearManager，跳过取消征召时的副武器恢复
+                if (DLCCompat.IsGhoul(pawn)) return;
 
                 var comp = pawn.GetComp<CompGearManager>();
                 if (comp != null)
