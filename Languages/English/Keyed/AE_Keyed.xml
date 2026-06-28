@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- Tab -->
+  <AE_Tab>Auto Equipment</AE_Tab>
+  <AE_TabTitle>Auto Equipment</AE_TabTitle>
+
+  <!-- Roles -->
+  <AE_Role_Default>Default</AE_Role_Default>
+  <AE_Role_Shooter>Shooter</AE_Role_Shooter>
+  <AE_Role_Brawler>Brawler</AE_Role_Brawler>
+  <AE_Role_Doctor>Doctor</AE_Role_Doctor>
+  <AE_Role_Hunter>Hunter</AE_Role_Hunter>
+  <AE_Role_Worker>Worker</AE_Role_Worker>
+  <AE_Role_Pacifist>Pacifist</AE_Role_Pacifist>
+
+  <!-- Contexts -->
+  <AE_Context_Normal>Normal</AE_Context_Normal>
+  <AE_Context_Combat>Combat</AE_Context_Combat>
+  <AE_Context_Work>Working</AE_Context_Work>
+  <AE_Context_Hunting>Hunting</AE_Context_Hunting>
+  <AE_Context_Cold>Cold</AE_Context_Cold>
+  <AE_Context_Hot>Hot</AE_Context_Hot>
+
+  <!-- ITab labels -->
+  <AE_CurrentRole>Current Role</AE_CurrentRole>
+  <AE_CurrentContext>Current Context</AE_CurrentContext>
+  <AE_LockGear>Lock Gear</AE_LockGear>
+  <AE_LockGear_Desc>Prevents Auto Equipment from managing this pawn's gear.</AE_LockGear_Desc>
+  <AE_OverrideRole>Override Role</AE_OverrideRole>
+  <AE_PrimaryWeapon>Primary Weapon</AE_PrimaryWeapon>
+  <AE_Sidearm>Sidearm</AE_Sidearm>
+  <AE_WornApparel>Worn Apparel</AE_WornApparel>
+  <AE_None>None</AE_None>
+  <AE_Role>Role</AE_Role>
+
+  <!-- Settings -->
+  <AE_Enabled>Enable Auto Equipment</AE_Enabled>
+  <AE_AutoSystems>Automatic Systems</AE_AutoSystems>
+  <AE_AutoWeapons>Auto-manage weapons</AE_AutoWeapons>
+  <AE_AutoApparel>Auto-manage apparel</AE_AutoApparel>
+  <AE_AutoInventory>Auto-manage inventory (medicine)</AE_AutoInventory>
+  <AE_Sidearms>Carry sidearms</AE_Sidearms>
+  <AE_Context>Context Switching</AE_Context>
+  <AE_CombatSwitch>Swap gear on draft/undraft</AE_CombatSwitch>
+  <AE_HuntingWeapon>Equip hunting weapon for hunting</AE_HuntingWeapon>
+  <AE_TemperatureAware>Temperature-aware apparel</AE_TemperatureAware>
+  <AE_JobAwareApparel>Job-aware apparel</AE_JobAwareApparel>
+  <AE_SidearmSettings>Sidearm Settings</AE_SidearmSettings>
+  <AE_AutoMelee>Auto-draw melee when attacked in melee</AE_AutoMelee>
+  <AE_CarryMedicine>Carry medicine</AE_CarryMedicine>
+  <AE_MedicineCount>Medicine count</AE_MedicineCount>
+  <AE_UpgradeThreshold>Upgrade threshold (swap if better by)</AE_UpgradeThreshold>
+  <AE_DebugLogging>Debug logging</AE_DebugLogging>
+  <AE_DebugLogging_Desc>Enable verbose logging for troubleshooting.</AE_DebugLogging_Desc>
+</LanguageData>

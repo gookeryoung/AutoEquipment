@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- 标签页 -->
+  <AE_Tab>自动装备</AE_Tab>
+  <AE_TabTitle>自动装备</AE_TabTitle>
+
+  <!-- 角色 -->
+  <AE_Role_Default>默认</AE_Role_Default>
+  <AE_Role_Shooter>射手</AE_Role_Shooter>
+  <AE_Role_Brawler>格斗者</AE_Role_Brawler>
+  <AE_Role_Doctor>医生</AE_Role_Doctor>
+  <AE_Role_Hunter>猎人</AE_Role_Hunter>
+  <AE_Role_Worker>工人</AE_Role_Worker>
+  <AE_Role_Pacifist>和平主义者</AE_Role_Pacifist>
+
+  <!-- 情境 -->
+  <AE_Context_Normal>日常</AE_Context_Normal>
+  <AE_Context_Combat>战斗</AE_Context_Combat>
+  <AE_Context_Work>工作中</AE_Context_Work>
+  <AE_Context_Hunting>狩猎中</AE_Context_Hunting>
+  <AE_Context_Cold>寒冷</AE_Context_Cold>
+  <AE_Context_Hot>炎热</AE_Context_Hot>
+
+  <!-- 面板标签 -->
+  <AE_CurrentRole>当前角色</AE_CurrentRole>
+  <AE_CurrentContext>当前情境</AE_CurrentContext>
+  <AE_LockGear>锁定装备</AE_LockGear>
+  <AE_LockGear_Desc>阻止自动装备管理此殖民者的装备。</AE_LockGear_Desc>
+  <AE_OverrideRole>手动指定角色</AE_OverrideRole>
+  <AE_PrimaryWeapon>主武器</AE_PrimaryWeapon>
+  <AE_Sidearm>副武器</AE_Sidearm>
+  <AE_WornApparel>已穿戴的衣物</AE_WornApparel>
+  <AE_None>无</AE_None>
+  <AE_Role>角色</AE_Role>
+
+  <!-- 设置 -->
+  <AE_Enabled>启用自动装备</AE_Enabled>
+  <AE_AutoSystems>自动系统</AE_AutoSystems>
+  <AE_AutoWeapons>自动管理武器</AE_AutoWeapons>
+  <AE_AutoApparel>自动管理衣物</AE_AutoApparel>
+  <AE_AutoInventory>自动管理背包（药品）</AE_AutoInventory>
+  <AE_Sidearms>携带副武器</AE_Sidearms>
+  <AE_Context>情境切换</AE_Context>
+  <AE_CombatSwitch>征召时切换装备</AE_CombatSwitch>
+  <AE_HuntingWeapon>狩猎时装备狩猎武器</AE_HuntingWeapon>
+  <AE_TemperatureAware>温度感知衣物</AE_TemperatureAware>
+  <AE_JobAwareApparel>工作感知衣物</AE_JobAwareApparel>
+  <AE_SidearmSettings>副武器设置</AE_SidearmSettings>
+  <AE_AutoMelee>近战时自动拔出近战武器</AE_AutoMelee>
+  <AE_CarryMedicine>携带药品</AE_CarryMedicine>
+  <AE_MedicineCount>药品数量</AE_MedicineCount>
+  <AE_UpgradeThreshold>升级阈值（优于当前多少时更换）</AE_UpgradeThreshold>
+  <AE_DebugLogging>调试日志</AE_DebugLogging>
+  <AE_DebugLogging_Desc>启用详细日志记录以便排查问题。</AE_DebugLogging_Desc>
+</LanguageData>

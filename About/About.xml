@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Auto Equipment</name>
+  <author>AutoEquipment</author>
+  <supportedVersions>
+    <li>1.6</li>
+  </supportedVersions>
+  <packageId>autoequipment.mod</packageId>
+  <description>Intelligent automatic equipment management based on Smart Gear design. Pawns equip the right weapon, wear the right clothes, and carry the right supplies based on their role, current job, weather, and combat status.
+
+Fixes two issues from the original design:
+- Ghouls (Anomaly DLC) no longer wander off looking for equipment.
+- Brawlers never auto-equip ranged weapons — they stick to melee.
+
+Zero configuration needed. Works out of the box. Every pawn auto-detects their role from skills and traits.
+
+Compatible with most mods. Safe to add mid-save.</description>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+    <li>ludeon.rimworld</li>
+  </loadAfter>
+</ModMetaData>
