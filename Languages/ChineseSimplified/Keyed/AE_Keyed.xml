@@ -125,11 +125,14 @@
 
   <!-- 自定义评级识别码 -->
   <AE_ReallocRules_CustomTier>自定义评级识别码</AE_ReallocRules_CustomTier>
-  <AE_ReallocRules_CustomTier_Desc>为该殖民者手动指定档次，跳过自动公式计算，直接按对应等级优先分配高价值装备。DEBUG 模式下名字后会显示识别码（如 [S#王五]）。</AE_ReallocRules_CustomTier_Desc>
+  <AE_ReallocRules_CustomTier_Desc>为该殖民者手动指定档次，跳过自动公式计算，直接按对应等级优先分配高价值装备。DEBUG 模式下名字后会显示识别码（如 S#王五）。</AE_ReallocRules_CustomTier_Desc>
   <AE_ReallocRules_CurrentTier>当前档次</AE_ReallocRules_CurrentTier>
   <AE_ReallocRules_AutoTier>自动档</AE_ReallocRules_AutoTier>
   <AE_ReallocRules_SetCustomTier>设置自定义档次</AE_ReallocRules_SetCustomTier>
   <AE_ReallocRules_ClearCustomTier>清除自定义</AE_ReallocRules_ClearCustomTier>
+  <AE_ReallocRules_ConfirmDesc>调整规则后点击"确认重配"执行，点击外部或取消则放弃。</AE_ReallocRules_ConfirmDesc>
+  <AE_ReallocRules_Confirm>确认重配</AE_ReallocRules_Confirm>
+  <AE_ReallocRules_Cancel>取消</AE_ReallocRules_Cancel>
   <AE_Tier_S>S：双火带特质（最高）</AE_Tier_S>
   <AE_Tier_A>A：双火</AE_Tier_A>
   <AE_Tier_B>B：单火</AE_Tier_B>

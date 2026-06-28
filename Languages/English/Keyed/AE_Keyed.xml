@@ -125,11 +125,14 @@
 
   <!-- Custom tier override -->
   <AE_ReallocRules_CustomTier>Custom Tier Code</AE_ReallocRules_CustomTier>
-  <AE_ReallocRules_CustomTier_Desc>Manually assign a tier for this colonist, bypassing auto formula and assigning high-value gear by tier. In DEBUG mode the label shows the code (e.g. [S#John]).</AE_ReallocRules_CustomTier_Desc>
+  <AE_ReallocRules_CustomTier_Desc>Manually assign a tier for this colonist, bypassing auto formula and assigning high-value gear by tier. In DEBUG mode the label shows the code (e.g. S#John).</AE_ReallocRules_CustomTier_Desc>
   <AE_ReallocRules_CurrentTier>Current tier</AE_ReallocRules_CurrentTier>
   <AE_ReallocRules_AutoTier>Auto</AE_ReallocRules_AutoTier>
   <AE_ReallocRules_SetCustomTier>Set Custom Tier</AE_ReallocRules_SetCustomTier>
   <AE_ReallocRules_ClearCustomTier>Clear Custom</AE_ReallocRules_ClearCustomTier>
+  <AE_ReallocRules_ConfirmDesc>Adjust rules then click "Confirm Reallocate" to execute. Click outside or Cancel to abort.</AE_ReallocRules_ConfirmDesc>
+  <AE_ReallocRules_Confirm>Confirm Reallocate</AE_ReallocRules_Confirm>
+  <AE_ReallocRules_Cancel>Cancel</AE_ReallocRules_Cancel>
   <AE_Tier_S>S: dual-passion with trait (top)</AE_Tier_S>
   <AE_Tier_A>A: dual-passion</AE_Tier_A>
   <AE_Tier_B>B: single-passion</AE_Tier_B>
