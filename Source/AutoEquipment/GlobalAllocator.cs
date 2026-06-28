@@ -49,11 +49,13 @@ namespace AutoEquipment
                     if (DLCCompat.IsGhoul(pawn)) continue;
                     if (!PawnSuitabilityChecker.CanManageGear(pawn)) continue;
                     if (pawn.Dead || pawn.Downed) continue;
-                    // 征召中的殖民者正在战斗，不打断
-                    if (pawn.Drafted) continue;
+                    // 征召中的殖民者正在战斗，不打断（玩家可在规则面板关闭此保护）
+                    if (AESettings.reallocateRespectDrafted && pawn.Drafted) continue;
 
                     CompGearManager comp = pawn.GetComp<CompGearManager>();
-                    if (comp == null || comp.locked) continue;
+                    // 已锁定的殖民者尊重玩家意愿（玩家可在规则面板关闭此保护）
+                    if (AESettings.reallocateRespectLocked && (comp == null || comp.locked)) continue;
+                    if (comp == null) continue;
 
                     sortedPawns.Add(pawn);
                 }
@@ -66,29 +68,39 @@ namespace AutoEquipment
 
             // ========== 第一遍：放下所有殖民者的当前武器 ==========
             // 设计意图：让无火小人手里的好武器进入地图候选池，供双火小人拾取
-            // 保护：跳过生物编码武器（个人绑定）、跳过无武器者
+            // 玩家可在规则面板关闭此步骤，仅评估地图上已有的武器
             int droppedCount = 0;
-            for (int i = 0; i < sortedPawns.Count; i++)
+            if (AESettings.reallocateDropWeapons)
             {
-                Pawn pawn = sortedPawns[i];
-                ThingWithComps primary = pawn.equipment?.Primary;
-                if (primary == null) continue;
-
-                // 生物编码武器：个人绑定，放下后无法被他人拾取，跳过
-                var bioApp = primary.TryGetComp<CompBiocodable>();
-                if (bioApp != null && bioApp.Biocoded) continue;
-
-                // 放下武器到 Pawn 位置，进入地图候选池
-                ThingWithComps dropped;
-                pawn.equipment.TryDropEquipment(primary, out dropped, pawn.Position, false);
-                if (dropped != null)
+                for (int i = 0; i < sortedPawns.Count; i++)
                 {
-                    droppedCount++;
-                    Log.Message($"[AutoEquipment] 全局重配: {pawn.LabelShort} 放下武器 {dropped.LabelShort}");
-                }
-            }
+                    Pawn pawn = sortedPawns[i];
+                    ThingWithComps primary = pawn.equipment?.Primary;
+                    if (primary == null) continue;
 
-            Log.Message($"[AutoEquipment] 全局重配: 共 {droppedCount} 把武器已释放到地图候选池");
+                    // 生物编码武器：个人绑定，放下后无法被他人拾取，跳过
+                    // 玩家可在规则面板关闭此保护（关闭后仍会放下，但他人无法拾取，纯属浪费）
+                    if (AESettings.reallocateRespectBiocoded)
+                    {
+                        var bioApp = primary.TryGetComp<CompBiocodable>();
+                        if (bioApp != null && bioApp.Biocoded) continue;
+                    }
+
+                    // 放下武器到 Pawn 位置，进入地图候选池
+                    ThingWithComps dropped;
+                    pawn.equipment.TryDropEquipment(primary, out dropped, pawn.Position, false);
+                    if (dropped != null)
+                    {
+                        droppedCount++;
+                        Log.Message($"[AutoEquipment] 全局重配: {pawn.LabelShort} 放下武器 {dropped.LabelShort}");
+                    }
+                }
+                Log.Message($"[AutoEquipment] 全局重配: 共 {droppedCount} 把武器已释放到地图候选池");
+            }
+            else
+            {
+                Log.Message("[AutoEquipment] 全局重配: 已禁用'放下当前武器'，仅评估地图候选池");
+            }
 
             // ========== 收集地图候选武器 ==========
             foreach (Map map in Find.Maps)
@@ -130,9 +142,12 @@ namespace AutoEquipment
                     if (w.def.IsRangedWeapon && pawn.WorkTagIsDisabled(WorkTags.Violent)) continue;
                     if (w.def.IsMeleeWeapon && pawn.WorkTagIsDisabled(WorkTags.Violent)) continue;
 
-                    // 生物编码检查：非编码者不能拾取
-                    var bioApp = w.TryGetComp<CompBiocodable>();
-                    if (bioApp != null && bioApp.Biocoded && bioApp.CodedPawn != pawn) continue;
+                    // 生物编码检查：非编码者不能拾取（玩家可关闭此保护，但关闭后仍会被游戏原生拒绝）
+                    if (AESettings.reallocateRespectBiocoded)
+                    {
+                        var bioApp = w.TryGetComp<CompBiocodable>();
+                        if (bioApp != null && bioApp.Biocoded && bioApp.CodedPawn != pawn) continue;
+                    }
 
                     float score = GearScorer.ScoreWeapon(pawn, w, role, context);
 

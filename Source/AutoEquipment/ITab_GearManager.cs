@@ -129,19 +129,31 @@ namespace AutoEquipment
 
             Widgets.EndScrollView();
 
-            // 全局重配按钮：固定面板最下方
-            Rect buttonRect = new Rect(
+            // 全局重配按钮区：固定面板最下方，并排两个按钮（避免纵向堆叠挤压可见区）
+            // 左：全局重配（执行分配）
+            // 右：重配规则（显示规则说明与可调开关）
+            float btnGap = 8f;
+            float btnWidth = (scrollRect.width - btnGap) * 0.5f;
+            Rect buttonRow = new Rect(
                 scrollRect.x,
                 scrollRect.yMax + buttonGap,
                 scrollRect.width,
                 buttonHeight);
 
-            if (Widgets.ButtonText(buttonRect, "AE_GlobalReallocate".Translate()))
+            Rect leftBtnRect = new Rect(buttonRow.x, buttonRow.y, btnWidth, buttonHeight);
+            Rect rightBtnRect = new Rect(buttonRow.x + btnWidth + btnGap, buttonRow.y, btnWidth, buttonHeight);
+
+            if (Widgets.ButtonText(leftBtnRect, "AE_GlobalReallocate".Translate()))
             {
                 int triggered = GlobalAllocator.ReallocateAll();
                 Messages.Message(
                     "AE_GlobalReallocateResult".Translate(triggered),
                     MessageTypeDefOf.PositiveEvent);
+            }
+
+            if (Widgets.ButtonText(rightBtnRect, "AE_ReallocRules".Translate()))
+            {
+                Find.WindowStack.Add(new ReallocateRulesWindow());
             }
         }
     }

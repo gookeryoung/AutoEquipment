@@ -33,6 +33,13 @@ namespace AutoEquipment
         public static float upgradeThreshold = 0.15f; // 评分需提升 15% 才触发换装
         public static float tempDangerMargin = 5f;    // 超出舒适温度范围多少度才触发换装
 
+        // 全局重配规则
+        // 设计为玩家可调：不同玩家偏好不同——有的希望彻底重配，有的希望尊重锁定/征召
+        public static bool reallocateDropWeapons = true;     // 重配前先放下当前武器，让无火小人的好武器可被双火小人拾取
+        public static bool reallocateRespectDrafted = true;  // 跳过征召中的殖民者（不打断战斗）
+        public static bool reallocateRespectLocked = true;  // 跳过已锁定的殖民者
+        public static bool reallocateRespectBiocoded = true; // 跳过生物编码武器（个人绑定，无法转交）
+
         // 调试
         public static bool debugLogging = false;       // 详细日志开关
 
@@ -60,6 +67,10 @@ namespace AutoEquipment
             Scribe_Values.Look(ref evaluateInterval, "evaluateInterval", 500);
             Scribe_Values.Look(ref upgradeThreshold, "upgradeThreshold", 0.15f);
             Scribe_Values.Look(ref tempDangerMargin, "tempDangerMargin", 5f);
+            Scribe_Values.Look(ref reallocateDropWeapons, "reallocateDropWeapons", true);
+            Scribe_Values.Look(ref reallocateRespectDrafted, "reallocateRespectDrafted", true);
+            Scribe_Values.Look(ref reallocateRespectLocked, "reallocateRespectLocked", true);
+            Scribe_Values.Look(ref reallocateRespectBiocoded, "reallocateRespectBiocoded", true);
             Scribe_Values.Look(ref debugLogging, "debugLogging", false);
 
             // 预设方案与监测开关由 GearPolicyEngine/DebugMonitor 持久化
