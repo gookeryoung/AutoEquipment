@@ -439,7 +439,27 @@ namespace AutoEquipment
         {
             if (pawn == null) return string.Empty;
             // LabelShort 包含昵称，对玩家可读且稳定
-            return pawn.LabelShort ?? string.Empty;
+            // 但若玩家点了"全局人物评级"按钮把 Nick 改为 "S#王五" 格式，
+            //   需剥离评级前缀返回纯净名 "王五"，否则：
+            //   1) customTierMap 查询失配（玩家设置时用的是原名）
+            //   2) 面板拼接会变成 "S#S#王五" 双重前缀
+            return StripTierTagPrefixFromLabel(pawn.LabelShort ?? string.Empty);
+        }
+
+        /// <summary>
+        /// 剥离 Label/Nick 上的评级前缀（格式：单字母 + #）。
+        /// 若无前缀返回原值。与 SGSettings.StripTierTagPrefix 同语义，独立实现避免跨类耦合。
+        /// </summary>
+        private static string StripTierTagPrefixFromLabel(string label)
+        {
+            if (string.IsNullOrEmpty(label) || label.Length < 2) return label;
+            char c = label[0];
+            // 单字母（A-Z，覆盖 S/A/B/C/D/X）+ #
+            if (c >= 'A' && c <= 'Z' && label[1] == '#')
+            {
+                return label.Substring(2);
+            }
+            return label;
         }
 
         /// <summary>

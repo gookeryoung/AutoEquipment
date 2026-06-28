@@ -24,11 +24,23 @@ namespace AutoEquipment
         ///   无自定义：S#王五
         ///   有自定义：S(A)#王五  （S 为系统档，A 为玩家指定档）
         /// 非 DEBUG 模式下返回原始 LabelShort，零开销。
+        ///
+        /// 防重复：若 Nick 已被"全局人物评级"按钮改为 "S#王五" 格式，
+        ///   pawn.LabelShort 本身已含评级前缀，此时直接返回 LabelShort，
+        ///   避免拼接出 "S#S#王五" 的双重前缀。
         /// </summary>
         public static string Label(Pawn pawn)
         {
             if (pawn == null) return "null";
             if (!IsActive) return pawn.LabelShort;
+
+            // 若 Nick 已带评级前缀（玩家点了"全局人物评级"按钮），直接返回 LabelShort
+            // 避免重复拼接 "S#S#王五"
+            string labelShort = pawn.LabelShort;
+            if (AESettings.HasTierTagPrefixOnLabel(labelShort))
+            {
+                return labelShort;
+            }
 
             // 系统评级始终固定显示
             CombatTier autoTier = SidearmAllocator.GetAutoCombatTier(pawn);

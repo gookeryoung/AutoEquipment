@@ -60,10 +60,19 @@ namespace AutoEquipment
 
             // 当前角色（DEBUG 模式下附加评级：系统档始终显示，自定义档写入括号）
             // 格式：[S#王五]（无自定义）或 [S(A)#王五]（有自定义，A 为玩家指定档）
+            // 但若玩家已点"全局人物评级"按钮把 Nick 改为 "S#王五" 格式，
+            //   名字本身已含评级，此处不再显示额外后缀，避免 "S#王五 [S#王五]" 重复
             Role role = comp.CurrentRole;
-            string tierSuffix = AEDebug.IsActive
-                ? " [" + AEDebug.Label(pawn) + "]"
-                : "";
+            string tierSuffix = "";
+            if (AEDebug.IsActive)
+            {
+                string tierLabel = AEDebug.Label(pawn);
+                // 若 AEDebug.Label 返回值就是 LabelShort（即 Nick 已带前缀），不显示后缀
+                if (tierLabel != pawn.LabelShort)
+                {
+                    tierSuffix = " [" + tierLabel + "]";
+                }
+            }
             l.Label("AE_CurrentRole".Translate() + ": " + ("AE_Role_" + role).Translate() + tierSuffix);
 
             // 当前情境

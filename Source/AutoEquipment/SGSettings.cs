@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -84,18 +84,38 @@ namespace AutoEquipment
         private const string TIER_TAG_PREFIX_SEPARATOR = "#";
 
         /// <summary>
-        /// 给所有玩家殖民者的 Nick 加上系统评级前缀，格式 "S#王五"。
+        /// 给所有玩家殖民者（含食尸鬼）的 Nick 加上系统评级前缀，格式 "S#王五"。
         /// 已加过前缀的会先剥离再重加，保证评级最新。
-        /// 跳过动物、机械族、食尸鬼、奴隶、未成年。
+        /// 跳过动物、机械族、奴隶、未成年。
+        /// 注：食尸鬼也按相同规则评级，但不参与装备分配——玩家可一眼分辨其价值。
         /// </summary>
         public static int ApplyTierTagsToAllPawns()
         {
             int touched = 0;
+            // 收集所有需要评级的 Pawn：殖民者 + 食尸鬼
+            // 食尸鬼不属于 FreeColonists，需从 AllPawns 中过滤
+            var pawns = new List<Pawn>();
             foreach (Pawn pawn in PawnsFinder.AllMaps_FreeColonists)
             {
-                if (pawn == null) continue;
+                if (pawn != null) pawns.Add(pawn);
+            }
+            // 食尸鬼也加入评级范围（仅评级，不分配装备）
+            foreach (Map map in Find.Maps)
+            {
+                if (map == null) continue;
+                foreach (Pawn pawn in map.mapPawns.AllPawns)
+                {
+                    if (pawn == null) continue;
+                    if (!DLCCompat.IsGhoul(pawn)) continue;
+                    if (pawn.Faction == null || !pawn.Faction.IsPlayer) continue;
+                    pawns.Add(pawn);
+                }
+            }
+
+            foreach (Pawn pawn in pawns)
+            {
                 if (!PawnSuitabilityChecker.CanManageGear(pawn)) continue;
-                if (DLCCompat.IsGhoul(pawn)) continue;
+                // 注：食尸鬼不再排除——用户要求食尸鬼也评级
 
                 NameTriple nt = pawn.Name as NameTriple;
                 if (nt == null) continue;
@@ -130,15 +150,32 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 清除所有殖民者 Nick 上的评级前缀，恢复原名。
+        /// 清除所有殖民者（含食尸鬼）Nick 上的评级前缀，恢复原名。
         /// 优先从 tierTagOriginals 取原名；若字典无（重启后），尝试从 Nick 解析剥离。
         /// </summary>
         public static int ClearTierTagsFromAllPawns()
         {
             int touched = 0;
+            // 收集殖民者 + 食尸鬼，与 Apply 保持一致
+            var pawns = new List<Pawn>();
             foreach (Pawn pawn in PawnsFinder.AllMaps_FreeColonists)
             {
-                if (pawn == null) continue;
+                if (pawn != null) pawns.Add(pawn);
+            }
+            foreach (Map map in Find.Maps)
+            {
+                if (map == null) continue;
+                foreach (Pawn pawn in map.mapPawns.AllPawns)
+                {
+                    if (pawn == null) continue;
+                    if (!DLCCompat.IsGhoul(pawn)) continue;
+                    if (pawn.Faction == null || !pawn.Faction.IsPlayer) continue;
+                    pawns.Add(pawn);
+                }
+            }
+
+            foreach (Pawn pawn in pawns)
+            {
                 NameTriple nt = pawn.Name as NameTriple;
                 if (nt == null) continue;
 
@@ -164,6 +201,16 @@ namespace AutoEquipment
             }
             tierTagOriginals.Clear();
             return touched;
+        }
+
+        /// <summary>
+        /// 检查 Nick 是否已有评级前缀（格式：单字母 + #）。
+        /// 公开供 AEDebug.Label 调用，避免 Nick 已被"全局人物评级"按钮改名后
+        /// 再次拼接出 "S#S#王五" 双重前缀。
+        /// </summary>
+        public static bool HasTierTagPrefixOnLabel(string label)
+        {
+            return HasTierTagPrefix(label);
         }
 
         /// <summary>
