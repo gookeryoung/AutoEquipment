@@ -35,6 +35,9 @@ namespace AutoEquipment
         // 调试
         public static bool debugLogging = false;       // 详细日志开关
 
+        // 设置窗口滚动位置：内容超出窗口高度时使用
+        private static Vector2 settingsScrollPos = Vector2.zero;
+
         public override void ExposeData()
         {
             Scribe_Values.Look(ref enabled, "enabled", true);
@@ -58,11 +61,22 @@ namespace AutoEquipment
 
         public static void DrawSettings(Rect inRect)
         {
+            // 设置项较多，固定高度会超出窗口，使用 ScrollView 支持滚动
+            // 注意：RimWorld 的 ScrollView inner rect 必须从 (0,0) 开始，
+            // 否则内容会偏移到 ScrollView 外导致不可见
+            float contentHeight = 560f;
+            Rect scrollRect = new Rect(inRect.x, inRect.y, inRect.width, inRect.height);
+            Rect viewRect = new Rect(0f, 0f, inRect.width - 16f, contentHeight);
+
+            Widgets.BeginScrollView(scrollRect, ref settingsScrollPos, viewRect);
+
+            // 将 ScrollView 起点平移到屏幕坐标，保证 Listing 正确绘制
+            // (BeginScrollView 会自动应用坐标变换，所以传入 viewRect 即可)
             Listing_Standard l = new Listing_Standard();
-            l.Begin(inRect);
+            l.Begin(viewRect);
 
             l.CheckboxLabeled("AE_Enabled".Translate(), ref enabled);
-            if (!enabled) { l.End(); return; }
+            if (!enabled) { l.End(); Widgets.EndScrollView(); return; }
 
             l.GapLine();
             l.Label("AE_AutoSystems".Translate());
@@ -111,6 +125,8 @@ namespace AutoEquipment
             }
 
             l.End();
+
+            Widgets.EndScrollView();
         }
     }
 

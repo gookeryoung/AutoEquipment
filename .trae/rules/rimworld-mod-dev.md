@@ -18,6 +18,15 @@
 - 空值防御: 链式访问用 `?.`，禁止裸访问 `pawn.skills.X`
 - 日志前缀 `[Mod缩写]`，异常用 `Log.ErrorOnce` 防重复
 
+## UI 与窗口
+
+- 设置窗口内容超出可见区域时必须用 `Widgets.BeginScrollView/EndScrollView` 包裹
+- ScrollView 的 inner rect 必须从 `(0, 0)` 开始，禁止用屏幕坐标作起点——否则内容会偏移到 ScrollView 外导致不可见
+- inner rect 宽度比 outer 少 16f（预留给滚动条），高度按内容预估并留余量
+- `Listing_Standard` 在 ScrollView 内绘制时直接 `Begin(innerRect)`，由 ScrollView 自动应用坐标变换
+- 设置类（继承 `Mod`）需用 `static Vector2` 字段保存滚动位置，避免每次重置
+- 自定义 `Window` 子类必须重写 `InitialSize`，且窗口大小需能容纳所有按钮（每按钮约 30f 高）
+
 ## Harmony 补丁
 
 - Harmony ID: `作者.mod名`，整个 MOD 单一实例
