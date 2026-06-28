@@ -100,3 +100,18 @@
 - `About.xml` 完整: `supportedVersions`、`packageId`、`modDependencies`、`description`（中文）
 - `dotnet build -c Release` 零错误零警告
 - 无 DLC 环境测试启动，有 DLC 环境测试功能
+
+## 更改后强制检查（强制）
+
+- **每次**修改 C#/XML/Makefile 后，必须立即执行 `make check` 验证零警告零错误
+- `make check` 通过 `-warnaserror` 把警告升级为错误，任何警告都会导致失败
+- 失败情形：编译错误、任意警告、输出 DLL 缺失
+- 不得跳过此步骤直接交付；如失败必须先修复再继续后续工作
+- 检查命令：在项目根目录执行 `make check`
+- 完整重建后检查：`make rebuild-check`
+- 命名空间必须与文件夹结构匹配（IDE0130 规则）：
+  - `Source/AutoEquipment/Scoring/*` → `namespace AutoEquipment.Scoring`
+  - `Source/AutoEquipment/Scoring/Weapon/*` → `namespace AutoEquipment.Scoring.Weapon`
+  - `Source/AutoEquipment/Scoring/Apparels/*` → `namespace AutoEquipment.Scoring.Apparels`
+- 跨命名空间引用必须显式 `using`，禁止依赖 IDE 自动补全
+- 提交前必须 `make check` 通过，否则禁止视为"已完成"

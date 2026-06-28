@@ -54,7 +54,7 @@ namespace AutoEquipment.Scoring
             {
                 var scorers = new List<IScorer<Apparel>>
                 {
-                    new ApparelTaintScorer(),       // 沾染惩罚
+                    new ApparelTaintedScorer(),     // 沾染惩罚
                     new ApparelTraitScorer(),        // 特质
                     new ApparelWorkScorer(),         // 工作加成
                     new ApparelContextScorer(),      // 情境（温度）

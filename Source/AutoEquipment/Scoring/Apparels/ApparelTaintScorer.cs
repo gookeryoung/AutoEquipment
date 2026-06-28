@@ -6,7 +6,10 @@ namespace AutoEquipment.Scoring.Apparels
     /// <summary>
     /// 防具沾染评分：沾染尸体的防具大幅扣分。
     /// </summary>
-    public class ApparelTaintScorer : IScorer<Apparel>
+    /// <summary>
+    /// 防具沾染评分：沾染尸体的防具大幅扣分。
+    /// </summary>
+    public class ApparelTaintedScorer : IScorer<Apparel>
     {
         public string Name => "沾染";
 
