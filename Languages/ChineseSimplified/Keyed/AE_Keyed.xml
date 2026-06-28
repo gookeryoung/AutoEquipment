@@ -91,6 +91,13 @@
   <AE_GlobalReallocate>全局重配</AE_GlobalReallocate>
   <AE_GlobalReallocateResult>已按战斗价值降序触发 {0} 个殖民者的全局重配</AE_GlobalReallocateResult>
 
+  <!-- 全局人物评级标签 -->
+  <AE_GlobalTierTag>全局人物评级</AE_GlobalTierTag>
+  <AE_TierTag_Apply>应用评级到名字（S#王五）</AE_TierTag_Apply>
+  <AE_TierTag_Clear>清除评级标签，恢复原名</AE_TierTag_Clear>
+  <AE_TierTag_ApplyResult>已为 {0} 个殖民者名字加上评级前缀</AE_TierTag_ApplyResult>
+  <AE_TierTag_ClearResult>已恢复 {0} 个殖民者的原名</AE_TierTag_ClearResult>
+
   <!-- 全局重配规则（直接显示在面板内） -->
   <AE_ReallocRules_Title>全局重配规则</AE_ReallocRules_Title>
   <AE_ReallocRules_CombatValue>战斗价值公式（决定评估顺序）</AE_ReallocRules_CombatValue>

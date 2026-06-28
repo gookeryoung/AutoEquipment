@@ -222,6 +222,11 @@ namespace AutoEquipment
         /// </summary>
         private static void ReallocateApparel()
         {
+            // 护甲分配按"全局价值评级"（CombatTier）降序，与武器分配解耦：
+            // 武器分配用 ComputeCombatValue（射击/格斗维度）排序；
+            // 护甲分配用 GetCombatTier（包含生产/社交/特质等全局价值）排序，
+            // 高评级殖民者优先获得价值最高的护甲。
+            sortedPawns.Sort(ComparePawnByCombatTierDesc);
             // ========== 第一遍：放下所有殖民者的当前护甲 ==========
             // 复用"放下当前武器"开关语义：放下所有护甲进入地图候选池，让低价值小人手里的好护甲可被高价值小人拾取
             int droppedApparelCount = 0;
@@ -359,6 +364,19 @@ namespace AutoEquipment
         private static int ComparePawnByCombatValueDesc(Pawn a, Pawn b)
         {
             return SidearmAllocator.ComputeCombatValue(b).CompareTo(SidearmAllocator.ComputeCombatValue(a));
+        }
+
+        /// <summary>
+        /// 按"全局价值评级"（CombatTier）降序比较：用于护甲分配优先级。
+        /// 同档内再用 ComputePawnValueScore（特质数 + 兴趣 + 技能等级）精排，
+        /// 让同档中培养更深的殖民者优先获得好装备。
+        /// </summary>
+        private static int ComparePawnByCombatTierDesc(Pawn a, Pawn b)
+        {
+            int tierA = (int)SidearmAllocator.GetCombatTier(a);
+            int tierB = (int)SidearmAllocator.GetCombatTier(b);
+            if (tierA != tierB) return tierB.CompareTo(tierA);
+            return SidearmAllocator.ComputePawnValueScore(b).CompareTo(SidearmAllocator.ComputePawnValueScore(a));
         }
     }
 }

@@ -91,6 +91,13 @@
   <AE_GlobalReallocate>Global Reallocate</AE_GlobalReallocate>
   <AE_GlobalReallocateResult>Triggered global reallocation for {0} colonists by combat value</AE_GlobalReallocateResult>
 
+  <!-- Global tier tag on pawn names -->
+  <AE_GlobalTierTag>Global Tier Tag</AE_GlobalTierTag>
+  <AE_TierTag_Apply>Apply tier prefix to names (e.g. S#John)</AE_TierTag_Apply>
+  <AE_TierTag_Clear>Clear tier prefix, restore names</AE_TierTag_Clear>
+  <AE_TierTag_ApplyResult>Tier prefix applied to {0} colonists</AE_TierTag_ApplyResult>
+  <AE_TierTag_ClearResult>Restored original names for {0} colonists</AE_TierTag_ClearResult>
+
   <!-- Global reallocate rules (inlined in panel) -->
   <AE_ReallocRules_Title>Global Reallocate Rules</AE_ReallocRules_Title>
   <AE_ReallocRules_CombatValue>Combat Value Formula (eval order)</AE_ReallocRules_CombatValue>

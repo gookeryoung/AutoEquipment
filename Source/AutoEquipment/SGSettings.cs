@@ -74,6 +74,121 @@ namespace AutoEquipment
         // 调试
         public static bool debugLogging = false;       // 详细日志开关
 
+        // ===================== 全局评级标签 =====================
+        // 设计：玩家点击"全局人物评级"按钮后，自动给所有殖民者的 Nick 加上系统评级前缀，
+        //   格式："S#王五"（系统档 S + # + 原 Nick）
+        //   自定义评级时仍按系统档计算前缀（与 AEDebug.Label 不同，此处只显示系统档）
+        // 用 thingIDNumber → 原 Nick 映射保存原名，便于恢复
+        // 注：不存档——游戏退出后丢失，但 Nick 本身会持久化；清除时按前缀解析兜底
+        private static readonly Dictionary<int, string> tierTagOriginals = new Dictionary<int, string>();
+        private const string TIER_TAG_PREFIX_SEPARATOR = "#";
+
+        /// <summary>
+        /// 给所有玩家殖民者的 Nick 加上系统评级前缀，格式 "S#王五"。
+        /// 已加过前缀的会先剥离再重加，保证评级最新。
+        /// 跳过动物、机械族、食尸鬼、奴隶、未成年。
+        /// </summary>
+        public static int ApplyTierTagsToAllPawns()
+        {
+            int touched = 0;
+            foreach (Pawn pawn in PawnsFinder.AllMaps_FreeColonists)
+            {
+                if (pawn == null) continue;
+                if (!PawnSuitabilityChecker.CanManageGear(pawn)) continue;
+                if (DLCCompat.IsGhoul(pawn)) continue;
+
+                NameTriple nt = pawn.Name as NameTriple;
+                if (nt == null) continue;
+
+                string currentNick = nt.Nick ?? string.Empty;
+                // 剥离已有评级前缀，得到"纯净名"
+                string cleanNick = StripTierTagPrefix(currentNick);
+
+                // 首次应用：保存原名到字典（若已存在则保留最早的）
+                int pid = pawn.thingIDNumber;
+                if (!tierTagOriginals.ContainsKey(pid))
+                {
+                    tierTagOriginals[pid] = cleanNick;
+                }
+                else
+                {
+                    // 已保存过原名，使用保存值作为"纯净名"
+                    cleanNick = tierTagOriginals[pid];
+                }
+
+                // 计算当前系统评级
+                CombatTier tier = SidearmAllocator.GetAutoCombatTier(pawn);
+                string newNick = tier + TIER_TAG_PREFIX_SEPARATOR + cleanNick;
+
+                if (newNick != currentNick)
+                {
+                    pawn.Name = new NameTriple(nt.First, newNick, nt.Last);
+                    touched++;
+                }
+            }
+            return touched;
+        }
+
+        /// <summary>
+        /// 清除所有殖民者 Nick 上的评级前缀，恢复原名。
+        /// 优先从 tierTagOriginals 取原名；若字典无（重启后），尝试从 Nick 解析剥离。
+        /// </summary>
+        public static int ClearTierTagsFromAllPawns()
+        {
+            int touched = 0;
+            foreach (Pawn pawn in PawnsFinder.AllMaps_FreeColonists)
+            {
+                if (pawn == null) continue;
+                NameTriple nt = pawn.Name as NameTriple;
+                if (nt == null) continue;
+
+                string currentNick = nt.Nick ?? string.Empty;
+                if (!HasTierTagPrefix(currentNick)) continue;
+
+                int pid = pawn.thingIDNumber;
+                string cleanNick;
+                if (tierTagOriginals.TryGetValue(pid, out string saved))
+                {
+                    cleanNick = saved;
+                }
+                else
+                {
+                    cleanNick = StripTierTagPrefix(currentNick);
+                }
+
+                if (cleanNick != currentNick)
+                {
+                    pawn.Name = new NameTriple(nt.First, cleanNick, nt.Last);
+                    touched++;
+                }
+            }
+            tierTagOriginals.Clear();
+            return touched;
+        }
+
+        /// <summary>
+        /// 检查 Nick 是否已有评级前缀（格式：单字母 + #）。
+        /// </summary>
+        private static bool HasTierTagPrefix(string nick)
+        {
+            if (string.IsNullOrEmpty(nick) || nick.Length < 2) return false;
+            // 单字母（A-Z）+ #
+            char c = nick[0];
+            return (c >= 'A' && c <= 'Z') && nick[1] == '#';
+        }
+
+        /// <summary>
+        /// 剥离 Nick 上的评级前缀。若无前缀返回原值。
+        /// </summary>
+        private static string StripTierTagPrefix(string nick)
+        {
+            if (HasTierTagPrefix(nick) && nick.Length > 2)
+            {
+                return nick.Substring(2);
+            }
+            return nick ?? string.Empty;
+        }
+
         // 预设方案（重构后新增）
         // 由 GearPolicyEngine 维护，此处仅作存档载体
         // 实际值通过 GearPolicyEngine.SwitchPreset 设置

@@ -16,8 +16,8 @@ namespace AutoEquipment
         public ITab_GearManager()
         {
             labelKey = "AE_Tab";
-            // 内容精简后无需 ScrollView：高度容纳 Pawn 状态 + 自定义评级 + 按钮
-            size = new Vector2(340f, 460f);
+            // 内容精简后无需 ScrollView：高度容纳 Pawn 状态 + 自定义评级 + 两按钮（评级标签 + 全局重配）
+            size = new Vector2(340f, 500f);
         }
 
         public override bool IsVisible
@@ -40,14 +40,14 @@ namespace AutoEquipment
             var comp = pawn.GetComp<CompGearManager>();
             if (comp == null) return;
 
-            // 底部按钮区预留高度
+            // 底部按钮区预留高度：两按钮（评级标签 + 全局重配）+ 间隔
             float buttonHeight = 30f;
-            float buttonGap = 10f;
+            float buttonGap = 8f;
 
             Rect rect = new Rect(0f, 0f, size.x, size.y).ContractedBy(10f);
 
-            // 内容区高度 = 总高 - 按钮区
-            Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (buttonHeight + buttonGap));
+            // 内容区高度 = 总高 - 两按钮区
+            Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (buttonHeight * 2 + buttonGap * 2));
 
             Listing_Standard l = new Listing_Standard();
             l.Begin(contentRect);
@@ -167,11 +167,45 @@ namespace AutoEquipment
 
             l.End();
 
-            // ===================== 底部：全局重配按钮 =====================
-            // 点击后弹出 Dialog_GlobalReallocate 显示规则，确认后才执行
-            Rect buttonRect = new Rect(
+            // ===================== 底部按钮：全局人物评级 + 全局重配 =====================
+            // 上方按钮：全局人物评级，弹出 FloatMenu 含应用/清除评级标签两个操作
+            Rect tierTagBtnRect = new Rect(
                 rect.x,
                 contentRect.yMax + buttonGap,
+                rect.width,
+                buttonHeight);
+
+            if (Widgets.ButtonText(tierTagBtnRect, "AE_GlobalTierTag".Translate()))
+            {
+                // 弹出 FloatMenu：应用评级 / 清除评级标签
+                var tierTagOptions = new List<FloatMenuOption>
+                {
+                    new FloatMenuOption(
+                        "AE_TierTag_Apply".Translate(),
+                        () =>
+                        {
+                            int n = AESettings.ApplyTierTagsToAllPawns();
+                            Messages.Message(
+                                "AE_TierTag_ApplyResult".Translate(n),
+                                MessageTypeDefOf.TaskCompletion);
+                        }),
+                    new FloatMenuOption(
+                        "AE_TierTag_Clear".Translate(),
+                        () =>
+                        {
+                            int n = AESettings.ClearTierTagsFromAllPawns();
+                            Messages.Message(
+                                "AE_TierTag_ClearResult".Translate(n),
+                                MessageTypeDefOf.TaskCompletion);
+                        })
+                };
+                Find.WindowStack.Add(new FloatMenu(tierTagOptions));
+            }
+
+            // 下方按钮：全局重配，点击后弹出规则对话框，确认后才执行
+            Rect buttonRect = new Rect(
+                rect.x,
+                tierTagBtnRect.yMax + buttonGap,
                 rect.width,
                 buttonHeight);
 
