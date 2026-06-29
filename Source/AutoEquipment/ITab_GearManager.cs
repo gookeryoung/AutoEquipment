@@ -102,6 +102,7 @@ namespace AutoEquipment
         public ITab_GearManager()
         {
             labelKey = "AE_Tab";
+
             // 高度增加以容纳徽章区与状态摘要
             size = new Vector2(360f, 560f);
         }
@@ -628,7 +629,7 @@ namespace AutoEquipment
         private void DrawStatRow(Listing_Standard l, float combatValue, float pawnValue)
         {
             // 战斗价值（整行）
-            Rect cvRect = l.GetRect(24f);
+            Rect cvRect = l.GetRect(32f);
             DrawStatBadge(cvRect, "AE_Badge_CombatValue".Translate(), combatValue.ToString("F1"),
                 new Color(0.2f, 0.4f, 0.6f));
             TooltipHandler.TipRegion(cvRect, "AE_TT_CombatValue".Translate());
@@ -636,7 +637,7 @@ namespace AutoEquipment
             l.Gap(2f);
 
             // 价值评分（整行）
-            Rect pvRect = l.GetRect(24f);
+            Rect pvRect = l.GetRect(32f);
             DrawStatBadge(pvRect, "AE_Badge_PawnValue".Translate(), pawnValue.ToString("F1"),
                 new Color(0.3f, 0.3f, 0.5f));
             TooltipHandler.TipRegion(pvRect, "AE_TT_PawnValue".Translate());
