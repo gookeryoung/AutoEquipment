@@ -7,7 +7,9 @@ CONFIG := Release
 OUTPUT := Assemblies/AutoEquipment.dll
 
 # .NET 命令
+# -clp:Force 强制刷新控制台输出，避免在 Trae IDE 终端中缓冲卡死
 DOTNET := dotnet
+DOTNET_FLAGS := -clp:Force
 
 .PHONY: all build check clean restore rebuild rebuild-check help
 
@@ -16,16 +18,17 @@ all: build
 
 # 构建项目
 build:
-	$(DOTNET) build -c $(CONFIG) $(PROJECT)
+	$(DOTNET) build -c $(CONFIG) $(DOTNET_FLAGS) $(PROJECT)
 
 # 检查：零警告零错误，用于改动后强制验证
-# 规则依据 .trae/rules/rimworld-mod-dev.md "发布检查" 条款
+# 规则依据 .trae/rules/rimworld-mod-dev.md "通用工作流" 条款
 # -warnaserror:将警告升级为错误，任何警告都会导致非零退出码
 # -nologo:抑制版权信息，便于日志阅读
+# -clp:Force:强制控制台输出，避免 Trae 终端缓冲卡死
 check:
-	@echo "[check] 验证零警告零错误..."
-	@$(DOTNET) build -c $(CONFIG) -warnaserror -nologo $(PROJECT)
-	@echo "[check] PASS: 零警告零错误"
+	echo "[check] 验证零警告零错误..."
+	$(DOTNET) build -c $(CONFIG) -warnaserror -nologo $(DOTNET_FLAGS) $(PROJECT)
+	echo "[check] PASS: 零警告零错误"
 
 # 仅还原依赖（无 NuGet 包时几乎无操作，留作扩展）
 restore:
@@ -33,7 +36,7 @@ restore:
 
 # 清理构建产物
 clean:
-	$(DOTNET) clean -c $(CONFIG) $(PROJECT)
+	$(DOTNET) clean -c $(CONFIG) $(DOTNET_FLAGS) $(PROJECT)
 	@if exist "$(OUTPUT)" del /Q "$(OUTPUT)"
 
 # 重新构建：先清理再构建
@@ -44,11 +47,11 @@ rebuild-check: clean check
 
 # 查看可用目标
 help:
-	@echo AutoEquipment Makefile 目标:
-	@echo   make build          构建项目 (默认)
-	@echo   make check          验证零警告零错误 (规则强制)
-	@echo   make clean         清理构建产物
-	@echo   make rebuild       清理后重新构建
-	@echo   make rebuild-check 清理后重新构建并验证
-	@echo   make restore       还原 NuGet 依赖
-	@echo   make help          显示此帮助信息
+	echo AutoEquipment Makefile 目标:
+	echo   make build          构建项目 (默认)
+	echo   make check          验证零警告零错误 (规则强制)
+	echo   make clean         清理构建产物
+	echo   make rebuild       清理后重新构建
+	echo   make rebuild-check 清理后重新构建并验证
+	echo   make restore       还原 NuGet 依赖
+	echo   make help          显示此帮助信息
