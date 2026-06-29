@@ -10,14 +10,14 @@
     <match Class="PatchOperationAdd">
       <xpath>/Defs/ThingDef[@Name="BasePawn"]/inspectorTabs</xpath>
       <value>
-        <li>AutoEverything.ITab_GearManager</li>
+        <li>AutoEverything.UI.ITab_GearManager</li>
       </value>
     </match>
     <nomatch Class="PatchOperationAdd">
       <xpath>/Defs/ThingDef[@Name="BasePawn"]</xpath>
       <value>
         <inspectorTabs>
-          <li>AutoEverything.ITab_GearManager</li>
+          <li>AutoEverything.UI.ITab_GearManager</li>
         </inspectorTabs>
       </value>
     </nomatch>

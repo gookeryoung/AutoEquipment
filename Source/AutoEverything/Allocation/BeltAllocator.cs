@@ -1,9 +1,13 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using RimWorld;
 using Verse;
 using Verse.AI;
+using AutoEverything.Core;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
 
-namespace AutoEverything
+namespace AutoEverything.Allocation
 {
     /// <summary>
     /// 腰带附件全局分配器：为纯近战角色（射击无火）分配护盾腰带或消防背包。
@@ -11,7 +15,7 @@ namespace AutoEverything
     /// 设计目的：
     /// - 纯近战角色需要贴身作战，护盾腰带提供远程防护，消防背包应对火灾/机械族
     /// - 全局协调：至少确保 1 名殖民者装备消防背包，避免全员护盾导致火灾无人应对
-    /// - 复用 SidearmAllocator.ComputeCombatValue 按战斗价值降序分配
+    /// - 复用 CombatEvaluator.ComputeCombatValue 按战斗价值降序分配
     ///
     /// 分配规则：
     /// 1. 收集所有纯近战角色（射击无火）且 belt 层空缺的殖民者
@@ -66,7 +70,7 @@ namespace AutoEverything
             var combatValueCache = new Dictionary<Pawn, float>();
             for (int i = 0; i < candidatePawns.Count; i++)
             {
-                combatValueCache[candidatePawns[i]] = SidearmAllocator.ComputeCombatValue(candidatePawns[i]);
+                combatValueCache[candidatePawns[i]] = CombatEvaluator.ComputeCombatValue(candidatePawns[i]);
             }
             candidatePawns.Sort((a, b) => combatValueCache[b].CompareTo(combatValueCache[a]));
 
@@ -192,7 +196,7 @@ namespace AutoEverything
             var job = JobMaker.MakeJob(JobDefOf.Wear, belt);
             pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
-            Log.Message($"[AutoEverything] 腰带分配: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
+            Log.Message($"[AutoEverything] 腰带分配: {AEDebug.Label(pawn)} (战斗价值={CombatEvaluator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
         }
 
         // ===================== 判定辅助 =====================

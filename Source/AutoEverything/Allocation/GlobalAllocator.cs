@@ -1,9 +1,13 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using RimWorld;
 using Verse;
 using Verse.AI;
+using AutoEverything.Core;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
 
-namespace AutoEverything
+namespace AutoEverything.Allocation
 {
     /// <summary>
     /// 全局装备重配：真正的"全局"分配语义。
@@ -21,7 +25,7 @@ namespace AutoEverything
     ///    避免高评级 Flexible 殖民者抢占 Heavy 殖民者急需的重甲
     /// 4. 副武器与库存仍用 ForceEvaluate（按单 Pawn 评估即可）
     ///
-    /// 战斗价值复用 SidearmAllocator.ComputeCombatValue：
+    /// 战斗价值复用 CombatEvaluator.ComputeCombatValue：
     /// 射击等级 × 兴趣乘数 + 近战等级 × 兴趣乘数
     /// 兴趣乘数：无火 1.0，单火 1.5，双火 2.0
     /// </summary>
@@ -78,7 +82,7 @@ namespace AutoEverything
             var combatValueCache = new Dictionary<Pawn, float>();
             for (int i = 0; i < sortedPawns.Count; i++)
             {
-                combatValueCache[sortedPawns[i]] = SidearmAllocator.ComputeCombatValue(sortedPawns[i]);
+                combatValueCache[sortedPawns[i]] = CombatEvaluator.ComputeCombatValue(sortedPawns[i]);
             }
             sortedPawns.Sort((a, b) => combatValueCache[b].CompareTo(combatValueCache[a]));
 
@@ -213,7 +217,7 @@ namespace AutoEverything
                     var job = JobMaker.MakeJob(JobDefOf.Equip, bestWeapon);
                     pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
-                    Log.Message($"[AutoEverything] 全局重配 #{i + 1}: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {bestWeapon.LabelShort} (score={bestScore:F1})");
+                    Log.Message($"[AutoEverything] 全局重配 #{i + 1}: {AEDebug.Label(pawn)} (战斗价值={CombatEvaluator.ComputeCombatValue(pawn):F1}) ← {bestWeapon.LabelShort} (score={bestScore:F1})");
                 }
                 else
                 {
@@ -246,8 +250,8 @@ namespace AutoEverything
             for (int i = 0; i < sortedPawns.Count; i++)
             {
                 Pawn p = sortedPawns[i];
-                tierCache[p] = (int)SidearmAllocator.GetCombatTier(p);
-                valueScoreCache[p] = SidearmAllocator.ComputePawnValueScore(p);
+                tierCache[p] = (int)CombatEvaluator.GetCombatTier(p);
+                valueScoreCache[p] = CombatEvaluator.ComputePawnValueScore(p);
             }
             sortedPawns.Sort((a, b) =>
             {
@@ -378,7 +382,7 @@ namespace AutoEverything
 
                     // 评级权重：同分时高评级优先
                     // 0.5 分/档：足够打破平局，但远小于匹配奖励(50)与惩罚(1000)
-                    CombatTier pawnTier = SidearmAllocator.GetCombatTier(pawn);
+                    CombatTier pawnTier = CombatEvaluator.GetCombatTier(pawn);
                     score += (float)pawnTier * 0.5f;
 
                     if (score > bestScore)

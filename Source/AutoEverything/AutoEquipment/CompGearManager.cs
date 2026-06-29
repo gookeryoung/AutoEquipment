@@ -1,11 +1,14 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
-using AutoEverything.Scoring;
+using AutoEverything.AutoEquipment.Scoring;
 using Verse.AI;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.Allocation;
+using AutoEverything.Core;
 
-namespace AutoEverything
+namespace AutoEverything.AutoEquipment
 {
     public class CompProperties_GearManager : CompProperties
     {

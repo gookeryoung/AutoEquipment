@@ -1,7 +1,10 @@
-using System;
+﻿using System;
 using Verse;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.Allocation;
+using AutoEverything.Core;
 
-namespace AutoEverything
+namespace AutoEverything.AutoEquipment
 {
     /// <summary>
     /// 装备 defName 启发式识别工具：统一判定武器/附件的类别归属。

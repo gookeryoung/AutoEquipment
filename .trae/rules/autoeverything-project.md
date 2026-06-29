@@ -16,10 +16,24 @@
 
 命名空间必须与文件夹结构匹配（IDE0130 规则）：
 
-- `Source/AutoEverything/*` → `namespace AutoEverything`
-- `Source/AutoEverything/Scoring/*` → `namespace AutoEverything.Scoring`
-- `Source/AutoEverything/Scoring/Weapon/*` → `namespace AutoEverything.Scoring.Weapon`
-- `Source/AutoEverything/Scoring/Apparels/*` → `namespace AutoEverything.Scoring.Apparels`
+- `Source/AutoEverything/Core/*` → `namespace AutoEverything.Core`
+- `Source/AutoEverything/RoleEvaluation/*` → `namespace AutoEverything.RoleEvaluation`
+- `Source/AutoEverything/AutoEquipment/*` → `namespace AutoEverything.AutoEquipment`
+- `Source/AutoEverything/AutoEquipment/Scoring/*` → `namespace AutoEverything.AutoEquipment.Scoring`
+- `Source/AutoEverything/AutoEquipment/Scoring/Weapon/*` → `namespace AutoEverything.AutoEquipment.Scoring.Weapon`
+- `Source/AutoEverything/AutoEquipment/Scoring/Apparels/*` → `namespace AutoEverything.AutoEquipment.Scoring.Apparels`
+- `Source/AutoEverything/Allocation/*` → `namespace AutoEverything.Allocation`
+- `Source/AutoEverything/UI/*` → `namespace AutoEverything.UI`
+
+### 模块职责
+
+- **Core**：基础工具与全局状态（MOD 入口、`AESettings`、`AEDebug`、`DLCCompat`、`PawnSuitabilityChecker`、`CombatTier`）
+- **RoleEvaluation**：角色与情境评价（`PawnRole`/`RoleDetector`、`GearContext`/`ContextDetector`、`CombatEvaluator`、`PawnStateCleaner`）
+- **AutoEquipment**：装备评分系统（`CompGearManager` Tick 入口、`GearScorer` 门面、`GearDefClassifier` 装备分类、`Scoring/` 评分管线与各 Scorer）
+- **Allocation**：全局分配策略（`GlobalAllocator`、`SidearmAllocator`、`BeltAllocator`、`PawnCombatProfile`）
+- **UI**：玩家界面（`ITab_GearManager`、`Dialog_GlobalReallocate`、`PresetDetailsWindow`）
+
+未来扩展（自动药物/自动食物等）应在 `Source/AutoEverything/` 下新增独立模块文件夹，按上述命名空间约定扩展。
 
 跨命名空间引用必须显式 `using`，禁止依赖 IDE 自动补全。
 

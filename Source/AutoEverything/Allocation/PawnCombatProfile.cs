@@ -1,7 +1,11 @@
-using RimWorld;
+﻿using RimWorld;
 using Verse;
+using AutoEverything.Core;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
 
-namespace AutoEverything
+namespace AutoEverything.Allocation
 {
     /// <summary>
     /// 战斗画像工具：统一判定 Pawn 的战斗行为画像。

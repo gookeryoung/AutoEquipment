@@ -354,37 +354,56 @@
 
 ```
 Source/AutoEverything/
-├── AutoEverything.csproj       # C# 7.3 项目文件
-├── ModController.cs           # MOD 入口，StaticConstructorOnStartup
-├── HarmonyPatches.cs          # Harmony 补丁：Comp 注入 + 取消征召恢复
-├── CompGearManager.cs         # ThingComp，Tick 入口与评估协调
-├── GearScorer.cs              # 评分门面
-├── GearContext.cs             # 情境检测
-├── PawnRole.cs                # 角色检测
-├── PawnSuitabilityChecker.cs  # Pawn 适配性过滤
-├── DLCCompat.cs               # DLC API 安全包装
-├── SidearmAllocator.cs        # 副武器全局分配 + 战斗价值/评级计算
-├── BeltAllocator.cs           # 腰带附件全局分配（护盾腰带/消防背包）
-├── GlobalAllocator.cs         # 全局装备重配（手动触发）
-├── Dialog_GlobalReallocate.cs # 全局重配规则对话框
-├── GearDefClassifier.cs       # 装备 Def 分类工具（武器/防具/腰带识别）
-├── PawnStateCleaner.cs        # Pawn 状态清理工具（异常装备/无效引用）
-├── PawnCombatProfile.cs       # Pawn 战斗画像（技能/特质/兴趣聚合）
-├── DebugHelper.cs             # AEDebug 日志工具
-├── DebugMonitor.cs            # 调试监测
-├── SGSettings.cs              # 设置窗口与持久化
-├── ITab_GearManager.cs        # 装备管理面板
-└── Scoring/
-    ├── IScorer.cs             # 评分策略接口
-    ├── ScoringPipeline.cs     # 评分管线
-    ├── ScoringPipelineFactory.cs
-    ├── ScoreBreakdown.cs      # 评分明细
-    ├── GearWeights.cs         # 权重结构 + 4 预设
-    ├── GearPreset.cs          # 预设枚举
-    ├── GearPolicyEngine.cs    # 策略调度
-    ├── Weapon/                # 9 个武器 Scorer + 1 个 RangeHelper
-    └── Apparels/              # 12 个防具 Scorer
+├── AutoEverything.csproj                  # C# 7.3 项目文件
+├── Core/                                  # → namespace AutoEverything.Core
+│   ├── ModController.cs                   # MOD 入口，StaticConstructorOnStartup
+│   ├── HarmonyPatches.cs                  # Harmony 补丁：Comp 注入 + 取消征召恢复
+│   ├── AutoEverythingMod.cs               # Mod 设置入口（从 SGSettings 拆分）
+│   ├── AESettings.cs                      # ModSettings 持久化 + 设置窗口（从 SGSettings 拆分）
+│   ├── ColonistBarSortMode.cs             # 殖民者栏排序枚举（从 SGSettings 拆分）
+│   ├── DLCCompat.cs                       # DLC API 安全包装
+│   ├── AEDebug.cs                         # AEDebug 日志工具（原 DebugHelper.cs 重命名）
+│   ├── DebugMonitor.cs                    # 调试监测
+│   ├── PawnSuitabilityChecker.cs          # Pawn 适配性过滤
+│   └── CombatTier.cs                      # 战斗价值档次枚举
+├── RoleEvaluation/                        # → namespace AutoEverything.RoleEvaluation
+│   ├── PawnRole.cs                        # 角色检测 + 护甲偏好
+│   ├── GearContext.cs                    # 情境检测
+│   ├── PawnStateCleaner.cs                # Pawn 状态清理工具
+│   └── CombatEvaluator.cs                 # 战斗价值/评级计算（从 SidearmAllocator 拆分）
+├── AutoEquipment/                         # → namespace AutoEverything.AutoEquipment
+│   ├── CompGearManager.cs                # ThingComp，Tick 入口与评估协调
+│   ├── GearScorer.cs                      # 评分门面
+│   ├── GearDefClassifier.cs               # 装备 Def 分类工具（武器/防具/腰带识别）
+│   └── Scoring/                           # → namespace AutoEverything.AutoEquipment.Scoring
+│       ├── IScorer.cs                     # 评分策略接口
+│       ├── ScoringPipeline.cs             # 评分管线
+│       ├── ScoringPipelineFactory.cs      # 管线工厂
+│       ├── ScoreBreakdown.cs              # 评分明细
+│       ├── GearWeights.cs                 # 权重结构 + 4 预设
+│       ├── GearPreset.cs                  # 预设枚举
+│       ├── GearPolicyEngine.cs            # 策略调度
+│       ├── Weapon/                        # → ...AutoEquipment.Scoring.Weapon（10 个文件）
+│       └── Apparels/                      # → ...AutoEquipment.Scoring.Apparels（12 个文件）
+├── Allocation/                            # → namespace AutoEverything.Allocation
+│   ├── GlobalAllocator.cs                 # 全局装备重配（手动触发）
+│   ├── SidearmAllocator.cs                # 副武器全局分配
+│   ├── BeltAllocator.cs                   # 腰带附件全局分配（护盾腰带/消防背包）
+│   └── PawnCombatProfile.cs               # Pawn 战斗画像（技能/特质/兴趣聚合）
+└── UI/                                    # → namespace AutoEverything.UI
+    ├── ITab_GearManager.cs                # 装备管理面板
+    ├── Dialog_GlobalReallocate.cs         # 全局重配规则对话框
+    └── PresetDetailsWindow.cs             # 预设方案详情窗口（从 SGSettings 拆分）
 ```
+
+**模块职责说明：**
+- **Core**：基础工具与全局状态（MOD 入口、设置、调试、DLC 兼容、Pawn 适配性、战斗价值档次）
+- **RoleEvaluation**：角色与情境评价（角色检测、情境检测、战斗价值评估、状态清理）
+- **AutoEquipment**：装备评分系统（CompTick 协调、评分门面、装备分类、评分管线与各 Scorer）
+- **Allocation**：全局分配策略（全局重配、副武器、腰带附件、Pawn 战斗画像）
+- **UI**：玩家界面（ITab 面板、对话框、预设详情窗口）
+
+未来扩展（自动药物/自动食物等）可在 `Source/AutoEverything/` 下新增独立模块文件夹，按上述命名空间约定扩展。
 
 ### 评估周期
 

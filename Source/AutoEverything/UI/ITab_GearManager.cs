@@ -1,9 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using AutoEverything.Core;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
+using AutoEverything.Allocation;
 
-namespace AutoEverything
+namespace AutoEverything.UI
 {
     /// <summary>
     /// Pawn 检视面板的自定义标签页：展示角色、情境、装备状态与自定义评级。
@@ -145,14 +150,14 @@ namespace AutoEverything
             {
                 cacheTick = tick;
                 cachedPawnId = pawnId;
-                // 食尸鬼也可能有 SidearmAllocator.GetCombatTier/ComputeCombatValue，
+                // 食尸鬼也可能有 CombatEvaluator.GetCombatTier/ComputeCombatValue，
                 // 用于玩家参考其价值（即使不参与分配）
                 cachedRole = comp != null ? comp.CurrentRole : RoleDetector.DetectRole(pawn);
                 cachedContext = ContextDetector.GetContext(pawn);
-                cachedTier = SidearmAllocator.GetCombatTier(pawn);
+                cachedTier = CombatEvaluator.GetCombatTier(pawn);
                 cachedArmorPref = RoleDetector.GetArmorPreference(cachedRole);
-                cachedCombatValue = SidearmAllocator.ComputeCombatValue(pawn);
-                cachedPawnValue = SidearmAllocator.ComputePawnValueScore(pawn);
+                cachedCombatValue = CombatEvaluator.ComputeCombatValue(pawn);
+                cachedPawnValue = CombatEvaluator.ComputePawnValueScore(pawn);
             }
 
             Role role = cachedRole;
@@ -246,8 +251,8 @@ namespace AutoEverything
             GUI.color = Color.white;
 
             // 显示当前 Pawn 的识别码：系统档固定，自定义档写入括号
-            string pawnName = SidearmAllocator.GetPawnLookupName(pawn);
-            CombatTier autoTier = SidearmAllocator.GetAutoCombatTier(pawn);
+            string pawnName = CombatEvaluator.GetPawnLookupName(pawn);
+            CombatTier autoTier = CombatEvaluator.GetAutoCombatTier(pawn);
             bool hasCustom = AESettings.TryGetCustomTier(pawnName, out CombatTier customTier);
 
             string tierCode = hasCustom

@@ -1,8 +1,13 @@
 using RimWorld;
 using UnityEngine;
 using Verse;
+using AutoEverything.Core;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
+using AutoEverything.Allocation;
 
-namespace AutoEverything
+namespace AutoEverything.UI
 {
     /// <summary>
     /// 全局重配规则确认对话框。
@@ -24,7 +29,7 @@ namespace AutoEverything
             {
                 // 自适应屏幕高度：取屏幕高度的 85%，最小 540f，最大 900f
                 // 宽度 480f 容纳 Slider 标签与数值
-                float screenHeight = UI.screenHeight;
+                float screenHeight = Verse.UI.screenHeight;
                 float height = UnityEngine.Mathf.Clamp(screenHeight * 0.85f, 540f, 900f);
                 return new Vector2(480f, height);
             }

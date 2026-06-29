@@ -1,4 +1,4 @@
-namespace AutoEverything.Core
+﻿namespace AutoEverything.Core
 {
     /// <summary>
     /// 殖民者战斗价值档次（用于全局重配优先级与 DEBUG 显示）。

@@ -1,7 +1,8 @@
-using RimWorld;
+﻿using RimWorld;
 using Verse;
+using AutoEverything.RoleEvaluation;
 
-namespace AutoEverything
+namespace AutoEverything.Core
 {
     /// <summary>
     /// 调试日志工具：受 AESettings.debugLogging 开关控制。
@@ -59,8 +60,8 @@ namespace AutoEverything
             }
 
             // 系统评级始终固定显示
-            CombatTier autoTier = SidearmAllocator.GetAutoCombatTier(pawn);
-            string name = SidearmAllocator.GetPawnLookupName(pawn);
+            CombatTier autoTier = CombatEvaluator.GetAutoCombatTier(pawn);
+            string name = CombatEvaluator.GetPawnLookupName(pawn);
 
             // 命中自定义评级时把自定义档写入括号
             if (AESettings.TryGetCustomTier(name, out CombatTier customTier))

@@ -1,5 +1,6 @@
-using RimWorld;
+﻿using RimWorld;
 using UnityEngine;
+using Verse;
 
 namespace AutoEverything.Core
 {

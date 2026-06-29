@@ -1,8 +1,11 @@
-using RimWorld;
+﻿using RimWorld;
 using Verse;
-using AutoEverything.Scoring;
+using AutoEverything.AutoEquipment.Scoring;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.Allocation;
+using AutoEverything.Core;
 
-namespace AutoEverything
+namespace AutoEverything.AutoEquipment
 {
     /// <summary>
     /// 装备评分器：重构为管线调度入口。

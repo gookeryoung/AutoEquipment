@@ -1,8 +1,8 @@
-using RimWorld;
+﻿using RimWorld;
 using Verse;
-using AutoEverything.Scoring;
+using AutoEverything.AutoEquipment.Scoring;
 
-namespace AutoEverything
+namespace AutoEverything.Core
 {
     /// <summary>
     /// 调试监测系统：向玩家/开发者展示装备评分与换装事件。

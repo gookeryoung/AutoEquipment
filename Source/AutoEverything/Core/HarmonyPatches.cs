@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System;
 using HarmonyLib;
 using RimWorld;
 using Verse;
+using AutoEverything.AutoEquipment;
 
-namespace AutoEverything
+namespace AutoEverything.Core
 {
     /// <summary>
     /// Auto Everything MOD 的全部 Harmony 补丁集合。

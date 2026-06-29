@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using RimWorld;
 using Verse;
 
-namespace AutoEverything
+namespace AutoEverything.Core
 {
     /// <summary>
     /// DLC 兼容性检测工具：集中包装所有 DLC 特定 API，

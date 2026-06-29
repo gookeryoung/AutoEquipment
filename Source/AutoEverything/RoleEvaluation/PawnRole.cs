@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
+using AutoEverything.Core;
 
-namespace AutoEverything
+namespace AutoEverything.RoleEvaluation
 {
     /// <summary>
     /// 基于 Pawn 技能与特质自动判定的角色枚举。

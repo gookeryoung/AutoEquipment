@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using Verse;
 using RimWorld;
+using AutoEverything.RoleEvaluation;
 
-namespace AutoEverything
+namespace AutoEverything.Core
 {
     /// <summary>
     /// MOD 启动引导类：游戏加载时由 RimWorld 自动调用静态构造函数。

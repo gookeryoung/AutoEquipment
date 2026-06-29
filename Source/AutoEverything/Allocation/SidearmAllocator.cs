@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
@@ -6,6 +6,7 @@ using Verse.AI;
 using AutoEverything.Core;
 using AutoEverything.RoleEvaluation;
 using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
 
 namespace AutoEverything.Allocation
 {

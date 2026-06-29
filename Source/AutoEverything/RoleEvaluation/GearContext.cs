@@ -1,8 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using RimWorld;
 using Verse;
+using AutoEverything.Core;
 
-namespace AutoEverything
+namespace AutoEverything.RoleEvaluation
 {
     public enum GearContext
     {

@@ -1,4 +1,4 @@
-namespace AutoEverything.Core
+﻿namespace AutoEverything.Core
 {
     /// <summary>
     /// 殖民者栏默认排序方式。
