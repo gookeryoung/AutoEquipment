@@ -6,6 +6,23 @@ using AutoEquipment.Scoring;
 
 namespace AutoEquipment
 {
+    /// <summary>
+    /// 殖民者栏默认排序方式。
+    /// 设计：玩家在 Mod 选项里配置默认排序，ITab 的"全局人物评级"按钮
+    /// 一键应用评级前缀并按此排序重排殖民者栏。
+    /// </summary>
+    public enum ColonistBarSortMode : byte
+    {
+        /// <summary>不排序：仅应用评级前缀，保留殖民者栏原顺序</summary>
+        None = 0,
+        /// <summary>按评级降序（S→A→B→C→D→X），同档内按战斗价值降序</summary>
+        ByTierThenValue = 1,
+        /// <summary>按角色分组（格斗者→射手→医生→工人→无暴力者→猎人→领袖），同角色内按评级降序</summary>
+        ByRoleThenTier = 2,
+        /// <summary>仅按战斗价值降序（不区分评级，高技能和平主义者可能挤占前列）</summary>
+        ByCombatValue = 3
+    }
+
     public class AESettings : ModSettings
     {
         // 主开关
@@ -73,6 +90,11 @@ namespace AutoEquipment
 
         // 调试
         public static bool debugLogging = false;       // 详细日志开关
+
+        // 殖民者栏默认排序方式：玩家在 Mod 选项里配置，
+        // ITab "全局人物评级"按钮一键应用评级前缀并按此排序重排
+        // 默认 ByTierThenValue：按评级 SABCDX 从左到右，最符合评级前缀的视觉直觉
+        public static ColonistBarSortMode defaultSortMode = ColonistBarSortMode.ByTierThenValue;
 
         // ===================== 全局评级标签 =====================
         // 设计：玩家点击"全局人物评级"按钮后，自动给所有殖民者的 Nick 加上系统评级前缀，
@@ -231,6 +253,32 @@ namespace AutoEquipment
         }
 
         /// <summary>
+        /// 应用评级前缀并按 Mod 选项配置的默认排序重排殖民者栏。
+        /// 玩家在 Mod 选项里配置 defaultSortMode，ITab "全局人物评级"按钮调用此方法。
+        /// None 模式下仅应用前缀不重排。
+        /// </summary>
+        public static int ApplyTierTagsWithDefaultSort()
+        {
+            int touched = ApplyTierTagsToAllPawns();
+            switch (defaultSortMode)
+            {
+                case ColonistBarSortMode.None:
+                    // 不重排：保留殖民者栏原顺序
+                    break;
+                case ColonistBarSortMode.ByTierThenValue:
+                    ReorderColonistBar(ComparePawnByTierThenValueDesc);
+                    break;
+                case ColonistBarSortMode.ByRoleThenTier:
+                    ReorderColonistBar(ComparePawnByRoleThenValueDesc);
+                    break;
+                case ColonistBarSortMode.ByCombatValue:
+                    ReorderColonistBar(ComparePawnByCombatValueOnlyDesc);
+                    break;
+            }
+            return touched;
+        }
+
+        /// <summary>
         /// 重排殖民者栏：按比较器排序后写入 displayOrder，刷新殖民者栏。
         /// RimWorld 殖民者栏顺序由 Pawn.playerSettings.displayOrder 决定，
         /// 修改后调 Find.ColonistBar.MarkColonistsDirty() 刷新缓存。
@@ -273,6 +321,18 @@ namespace AutoEquipment
         }
 
         /// <summary>
+        /// 仅按战斗价值降序比较器：不区分评级，纯按 ComputeCombatValue 排序。
+        /// 注意：高技能的和平主义者（X 档）可能挤占 S/A 档前列位置，
+        /// 仅适用于玩家明确希望"纯战斗价值优先"的场景。
+        /// </summary>
+        private static int ComparePawnByCombatValueOnlyDesc(Pawn a, Pawn b)
+        {
+            float va = SidearmAllocator.ComputeCombatValue(a);
+            float vb = SidearmAllocator.ComputeCombatValue(b);
+            return vb.CompareTo(va);
+        }
+
+        /// <summary>
         /// 角色优先级 + 评级降序比较器。
         /// 角色顺序：Brawler(0) → Shooter(1) → Doctor(2) → Worker(3) → Pacifist(4) → Hunter(5) → Leader(6) → Default(99)。
         /// 同角色内按评级降序（S→A→B→C→D→X），同档内按战斗价值降序。
@@ -302,6 +362,14 @@ namespace AutoEquipment
                 case Role.Leader:   return 6;
                 default:            return 99;
             }
+        }
+
+        /// <summary>
+        /// 获取排序模式的可读标签（用于设置界面按钮与 FloatMenu 选项）。
+        /// </summary>
+        private static string GetSortModeLabel(ColonistBarSortMode mode)
+        {
+            return ("AE_SortMode_" + mode).Translate();
         }
 
         /// <summary>
@@ -394,6 +462,8 @@ namespace AutoEquipment
             LookCompat(ref heavyArmorPenaltyForLight, "heavyArmorPenaltyForLight", -1000f);
             LookCompat(ref lightArmorPenaltyForHeavy, "lightArmorPenaltyForHeavy", -1000f);
             LookCompat(ref debugLogging, "debugLogging", false);
+            // 殖民者栏默认排序方式
+            Scribe_Values.Look(ref defaultSortMode, "ae_defaultSortMode", ColonistBarSortMode.ByTierThenValue);
 
             // 自定义评级：以 List<string> 作为存档载体（"档次#名字" 格式）
             // 存档加载后需重建运行时字典
@@ -539,7 +609,7 @@ namespace AutoEquipment
         {
             // 双列布局：内容压缩到约 460f 高
             // 保留 ScrollView 作为极小窗口的安全兜底
-            float contentHeight = 460f;
+            float contentHeight = 540f;  // 右列新增排序选项区，预留更多高度
             Rect scrollRect = new Rect(inRect.x, inRect.y, inRect.width, inRect.height);
             Rect viewRect = new Rect(0f, 0f, inRect.width - 16f, contentHeight);
 
@@ -608,6 +678,28 @@ namespace AutoEquipment
 
             r.GapLine();
             r.CheckboxLabeled("AE_DebugLogging".Translate(), ref debugLogging, "AE_DebugLogging_Desc".Translate());
+
+            // 殖民者栏默认排序方式：点击按钮弹 FloatMenu 选择
+            // 设计：玩家配置好默认排序后，ITab "全局人物评级"按钮一键应用
+            r.GapLine();
+            r.Label("AE_DefaultSortMode".Translate());
+            Rect sortBtnRect = r.GetRect(28f);
+            if (Widgets.ButtonText(sortBtnRect, GetSortModeLabel(defaultSortMode)))
+            {
+                var sortOptions = new List<FloatMenuOption>
+                {
+                    new FloatMenuOption(GetSortModeLabel(ColonistBarSortMode.None),
+                        () => defaultSortMode = ColonistBarSortMode.None),
+                    new FloatMenuOption(GetSortModeLabel(ColonistBarSortMode.ByTierThenValue),
+                        () => defaultSortMode = ColonistBarSortMode.ByTierThenValue),
+                    new FloatMenuOption(GetSortModeLabel(ColonistBarSortMode.ByRoleThenTier),
+                        () => defaultSortMode = ColonistBarSortMode.ByRoleThenTier),
+                    new FloatMenuOption(GetSortModeLabel(ColonistBarSortMode.ByCombatValue),
+                        () => defaultSortMode = ColonistBarSortMode.ByCombatValue)
+                };
+                Find.WindowStack.Add(new FloatMenu(sortOptions));
+            }
+            TooltipHandler.TipRegion(sortBtnRect, "AE_TT_DefaultSortMode".Translate());
 
             // 监测开关（重构新增）
             r.GapLine();

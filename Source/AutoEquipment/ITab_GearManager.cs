@@ -253,43 +253,21 @@ namespace AutoEquipment
 
             if (Widgets.ButtonText(tierTagBtnRect, "AE_GlobalTierTag".Translate()))
             {
-                // 弹出 FloatMenu：4 选项分 2 组
-                // 分组1：应用评级（3 选项，标签前加 ▸ 标识）
-                // 分组2：清除评级（1 选项，分隔后单独显示）
+                // 弹出 FloatMenu：2 选项
+                // - 应用评级到名字：使用 Mod 选项配置的默认排序重排殖民者栏
+                // - 清除评级标签：恢复原名，保留殖民者栏当前顺序
+                // 排序方式在 Mod 选项 "默认排序" 里配置（ByTierThenValue/ByRoleThenTier/ByCombatValue/None）
                 var tierTagOptions = new List<FloatMenuOption>
                 {
-                    // ========== 应用评级组 ==========
                     new FloatMenuOption(
                         "AE_TierTag_Apply".Translate(),
                         () =>
                         {
-                            int n = AESettings.ApplyTierTagsToAllPawns();
+                            int n = AESettings.ApplyTierTagsWithDefaultSort();
                             Messages.Message(
                                 "AE_TierTag_ApplyResult".Translate(n),
                                 MessageTypeDefOf.TaskCompletion);
                         }),
-                    new FloatMenuOption(
-                        "AE_TierTag_ApplyAndSortByValue".Translate(),
-                        () =>
-                        {
-                            int n = AESettings.ApplyTierTagsAndSortByValue();
-                            Messages.Message(
-                                "AE_TierTag_ApplyAndSortResult".Translate(n),
-                                MessageTypeDefOf.TaskCompletion);
-                        }),
-                    new FloatMenuOption(
-                        "AE_TierTag_ApplyAndSortByRole".Translate(),
-                        () =>
-                        {
-                            int n = AESettings.ApplyTierTagsAndSortByRole();
-                            Messages.Message(
-                                "AE_TierTag_ApplyAndSortResult".Translate(n),
-                                MessageTypeDefOf.TaskCompletion);
-                        }),
-                    // ========== 清除评级组（用分隔标签区分）==========
-                    new FloatMenuOption(
-                        "───",
-                        null),
                     new FloatMenuOption(
                         "AE_TierTag_Clear".Translate(),
                         () =>

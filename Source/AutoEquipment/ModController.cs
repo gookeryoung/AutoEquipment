@@ -48,6 +48,16 @@ namespace AutoEquipment
                     Log.Warning($"[AutoEquipment] 缺少翻译键: {key}（GearContext 枚举 {ctx}）");
                 }
             }
+
+            // ColonistBarSortMode 枚举翻译键校验
+            foreach (ColonistBarSortMode mode in Enum.GetValues(typeof(ColonistBarSortMode)))
+            {
+                string key = "AE_SortMode_" + mode;
+                if (!key.CanTranslate())
+                {
+                    Log.Warning($"[AutoEquipment] 缺少翻译键: {key}（ColonistBarSortMode 枚举 {mode}）");
+                }
+            }
         }
     }
 }

@@ -263,30 +263,29 @@
 
 ### 全局人物评级标签（Nick 改名 + 殖民者栏重排）
 
-面板底部"全局人物评级"按钮弹出 FloatMenu，提供 4 个分两组的选项：
-
-**应用评级组**：
+面板底部"全局人物评级"按钮弹出 FloatMenu，提供 2 个选项：
 
 | 操作 | 效果 |
 |------|------|
-| 应用评级到名字 | 所有殖民者 Nick 变为 `S#王五` `A#李四` 格式，玩家一眼分辨评级 |
-| 应用评级到名字并按价值排序 | 加上前缀后，按评级 S→A→B→C→D→X 从左到右排列，同档内按战斗价值降序 |
-| 应用评级到名字并按角色重排 | 加上前缀后，按角色分组重排殖民者栏：格斗者→射手→医生→工人→无暴力者→猎人→领袖，同角色内按评级降序 |
-
-**清除评级组**（用分隔线区分）：
-
-| 操作 | 效果 |
-|------|------|
+| 应用评级到名字 | 所有殖民者 Nick 变为 `S#王五` `A#李四` 格式，并按 Mod 选项配置的默认排序重排殖民者栏 |
 | 清除评级标签 | 恢复原 Nick，从字典取原名或按前缀解析剥离；保留殖民者栏当前顺序不重置 |
 
 **覆盖范围**：殖民者 + 食尸鬼（Anomaly DLC）。食尸鬼也按相同规则评级，但不参与装备分配——玩家可一眼分辨其价值。排序仅作用于 `PawnsFinder.AllMaps_FreeColonists`（不含食尸鬼），通过 `pawn.playerSettings.displayOrder` 写入并 `Find.ColonistBar.MarkColonistsDirty()` 刷新。
 
-**按价值排序规则**（`ComparePawnByTierThenValueDesc`）：
-1. 先按 `CombatTier` 降序：S(5) > A(4) > B(3) > C(2) > D(1) > X(0)
-2. 同档内按 `ComputeCombatValue` 降序
-3. 设计意图：和平主义者（X 档）即使技能高也排在最右，避免挤占 S/A 档位置
+### 殖民者栏默认排序（Mod 选项）
 
-**角色排序优先级**（`SGSettings.GetRoleOrder`）：
+在 Mod 选项 → "默认排序" 里配置，`AESettings.defaultSortMode` 字段，存档键 `ae_defaultSortMode`，默认 `ByTierThenValue`。
+
+| 排序模式 | 比较器 | 规则 |
+|---------|--------|------|
+| 不排序 | — | 仅应用前缀，保留殖民者栏原顺序 |
+| 按评级+价值（推荐） | `ComparePawnByTierThenValueDesc` | 先按 `CombatTier` 降序 S→A→B→C→D→X，同档内按 `ComputeCombatValue` 降序 |
+| 按角色+评级 | `ComparePawnByRoleThenValueDesc` | 按角色分组，同角色内按评级降序 |
+| 按战斗价值 | `ComparePawnByCombatValueOnlyDesc` | 纯按 `ComputeCombatValue` 降序，不区分评级（高技能和平主义者可能挤占前列） |
+
+**按评级+价值的设计意图**：和平主义者（X 档）即使技能高也排在最右，避免挤占 S/A 档位置。
+
+**角色排序优先级**（`SGSettings.GetRoleOrder`，用于"按角色+评级"模式）：
 
 | 顺序 | 角色 | 说明 |
 |------|------|------|

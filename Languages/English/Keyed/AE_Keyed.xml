@@ -98,12 +98,25 @@
   <!-- Global tier tag on pawn names -->
   <AE_GlobalTierTag>Global Tier Tag</AE_GlobalTierTag>
   <AE_TierTag_Apply>Apply tier prefix to names (e.g. S#John)</AE_TierTag_Apply>
-  <AE_TierTag_ApplyAndSortByValue>Apply tier prefix and sort by value</AE_TierTag_ApplyAndSortByValue>
-  <AE_TierTag_ApplyAndSortByRole>Apply tier prefix and reorder by role</AE_TierTag_ApplyAndSortByRole>
   <AE_TierTag_Clear>Clear tier prefix, restore names</AE_TierTag_Clear>
   <AE_TierTag_ApplyResult>Tier prefix applied to {0} colonists</AE_TierTag_ApplyResult>
-  <AE_TierTag_ApplyAndSortResult>Applied tier prefix and reordered colonist bar for {0} colonists</AE_TierTag_ApplyAndSortResult>
   <AE_TierTag_ClearResult>Restored original names for {0} colonists</AE_TierTag_ClearResult>
+  <AE_TT_GlobalTierTag>Applies tier prefix to colonist Nick and reorders the colonist bar by the default sort mode configured in Mod settings.
+Clear restores original names and keeps the current colonist bar order.
+"Global Gear Reallocate" does NOT change the colonist bar order.
+Sort mode is configured in Mod settings under "Default Sort".</AE_TT_GlobalTierTag>
+
+  <!-- Colonist bar default sort mode (Mod settings) -->
+  <AE_DefaultSortMode>Default Sort</AE_DefaultSortMode>
+  <AE_TT_DefaultSortMode>Configures how the "Global Tier Tag" button reorders the colonist bar after applying tier prefix.
+None: only apply prefix, keep original order.
+By Tier+Value: S->A->B->C->D->X left to right, within tier by combat value desc (recommended).
+By Role+Tier: Brawler -> Shooter -> Doctor -> Worker -> Pacifist -> Hunter -> Leader, within role by tier desc.
+By Combat Value: pure combat value desc, ignoring tier (high-skill pacifists may take front spots).</AE_TT_DefaultSortMode>
+  <AE_SortMode_None>None (keep order)</AE_SortMode_None>
+  <AE_SortMode_ByTierThenValue>By Tier+Value (SABCDX)</AE_SortMode_ByTierThenValue>
+  <AE_SortMode_ByRoleThenTier>By Role+Tier</AE_SortMode_ByRoleThenTier>
+  <AE_SortMode_ByCombatValue>By Combat Value</AE_SortMode_ByCombatValue>
 
   <!-- Global reallocate rules (inlined in panel) -->
   <AE_ReallocRules_Title>Global Reallocate Rules</AE_ReallocRules_Title>
@@ -199,10 +212,5 @@
   <AE_TT_ArmorPref_Light>Light[worker]: forced light armor for work efficiency</AE_TT_ArmorPref_Light>
   <AE_TT_LockGear>When checked, this colonist's gear is not auto-managed</AE_TT_LockGear>
   <AE_TT_OverrideRole>When checked, manually set role overrides auto detection</AE_TT_OverrideRole>
-  <AE_TT_GlobalTierTag>Add tier prefix to colonist Nick for quick identification of value.
-"Apply tier prefix and sort by value" reorders the colonist bar: by tier S->A->B->C->D->X from left to right, within same tier by combat value desc.
-"Apply tier prefix and reorder by role" reorders by role group: Brawler -> Shooter -> Doctor -> Worker -> Pacifist -> Hunter -> Leader, within role by tier desc.
-Clear restores original names and keeps the colonist bar order.
-"Global Gear Reallocate" does NOT change the colonist bar order.</AE_TT_GlobalTierTag>
   <AE_TT_GlobalReallocate>Drop all colonist weapons and apparel, reallocate by combat value desc. Ghouls are skipped.</AE_TT_GlobalReallocate>
 </LanguageData>

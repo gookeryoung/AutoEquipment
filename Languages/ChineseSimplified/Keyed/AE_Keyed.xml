@@ -98,17 +98,25 @@
   <!-- 全局人物评级标签 -->
   <AE_GlobalTierTag>全局人物评级</AE_GlobalTierTag>
   <AE_TierTag_Apply>应用评级到名字（S#王五）</AE_TierTag_Apply>
-  <AE_TierTag_ApplyAndSortByValue>应用评级到名字并按价值排序</AE_TierTag_ApplyAndSortByValue>
-  <AE_TierTag_ApplyAndSortByRole>应用评级到名字并按角色重排</AE_TierTag_ApplyAndSortByRole>
   <AE_TierTag_Clear>清除评级标签，恢复原名</AE_TierTag_Clear>
   <AE_TierTag_ApplyResult>已为 {0} 个殖民者名字加上评级前缀</AE_TierTag_ApplyResult>
-  <AE_TierTag_ApplyAndSortResult>已为 {0} 个殖民者应用评级并重排殖民者栏</AE_TierTag_ApplyAndSortResult>
   <AE_TierTag_ClearResult>已恢复 {0} 个殖民者的原名</AE_TierTag_ClearResult>
-  <AE_TT_GlobalTierTag>应用评级前缀到殖民者 Nick，便于快速识别价值。
-点击"应用评级到名字并按价值排序"还会重排殖民者栏：按评级 S→A→B→C→D→X 从左到右排列，同档内按战斗价值降序。
-点击"应用评级到名字并按角色重排"会按角色分组重排：格斗者→射手→医生→工人→无暴力者→猎人→领袖，同角色内按评级降序。
-清除评级会恢复原名并保留殖民者栏原顺序。
-"全局装备重配"不会改变殖民者栏顺序。</AE_TT_GlobalTierTag>
+  <AE_TT_GlobalTierTag>应用评级前缀到殖民者 Nick，并按 Mod 选项配置的默认排序重排殖民者栏。
+清除评级会恢复原名并保留殖民者栏当前顺序。
+"全局装备重配"不会改变殖民者栏顺序。
+排序方式在 Mod 选项 "默认排序" 里配置。</AE_TT_GlobalTierTag>
+
+  <!-- 殖民者栏默认排序方式（Mod 选项） -->
+  <AE_DefaultSortMode>殖民者栏默认排序</AE_DefaultSortMode>
+  <AE_TT_DefaultSortMode>配置"全局人物评级"按钮应用评级后殖民者栏的重排方式。
+不排序：仅应用前缀，保留原顺序。
+按评级+价值：S→A→B→C→D→X 从左到右，同档内按战斗价值降序（推荐）。
+按角色+评级：格斗者→射手→医生→工人→无暴力者→猎人→领袖，同角色内按评级降序。
+按战斗价值：纯按战斗价值降序，不区分评级（高技能和平主义者可能挤占前列）。</AE_TT_DefaultSortMode>
+  <AE_SortMode_None>不排序（保留原顺序）</AE_SortMode_None>
+  <AE_SortMode_ByTierThenValue>按评级+价值（SABCDX）</AE_SortMode_ByTierThenValue>
+  <AE_SortMode_ByRoleThenTier>按角色+评级</AE_SortMode_ByRoleThenTier>
+  <AE_SortMode_ByCombatValue>按战斗价值</AE_SortMode_ByCombatValue>
 
   <!-- 全局重配规则（直接显示在面板内） -->
   <AE_ReallocRules_Title>全局重配规则</AE_ReallocRules_Title>
@@ -204,6 +212,5 @@
   <AE_TT_ArmorPref_Light>轻甲[工人]：强制选轻甲以保持工作效率</AE_TT_ArmorPref_Light>
   <AE_TT_LockGear>勾选后此殖民者的装备不被自动管理</AE_TT_LockGear>
   <AE_TT_OverrideRole>勾选后手动指定角色，覆盖自动判定</AE_TT_OverrideRole>
-  <AE_TT_GlobalTierTag>给所有殖民者名字加评级前缀（如 S#王五），便于快速识别</AE_TT_GlobalTierTag>
   <AE_TT_GlobalReallocate>放下所有殖民者武器与护甲，按战斗价值降序重新分配。食尸鬼会被自动跳过。</AE_TT_GlobalReallocate>
 </LanguageData>
