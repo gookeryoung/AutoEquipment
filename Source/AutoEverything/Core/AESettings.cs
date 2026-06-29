@@ -17,6 +17,7 @@ namespace AutoEverything.Core
         public static bool autoApparel = true;
         public static bool autoInventory = true;
         public static bool sidearms = true;
+        public static bool autoWorkEnabled = true;  // AutoWork 自动工作分配主开关
 
         // 情境切换
         public static bool combatSwitch = true;      // 征召/取消征召时切换装备
@@ -448,6 +449,7 @@ namespace AutoEverything.Core
             LookCompat(ref heavyArmorPenaltyForLight, "heavyArmorPenaltyForLight", -1000f);
             LookCompat(ref lightArmorPenaltyForHeavy, "lightArmorPenaltyForHeavy", -1000f);
             LookCompat(ref debugLogging, "debugLogging", false);
+            LookCompat(ref autoWorkEnabled, "autoWorkEnabled", true);
             // 殖民者栏默认排序方式
             Scribe_Values.Look(ref defaultSortMode, "ae_defaultSortMode", ColonistBarSortMode.ByTierThenValue);
 
@@ -619,6 +621,7 @@ namespace AutoEverything.Core
             l.CheckboxLabeled("AE_AutoApparel".Translate(), ref autoApparel);
             l.CheckboxLabeled("AE_AutoInventory".Translate(), ref autoInventory);
             l.CheckboxLabeled("AE_Sidearms".Translate(), ref sidearms);
+            l.CheckboxLabeled("AE_AutoWork".Translate(), ref autoWorkEnabled);
 
             l.GapLine();
             l.Label("AE_Context".Translate());

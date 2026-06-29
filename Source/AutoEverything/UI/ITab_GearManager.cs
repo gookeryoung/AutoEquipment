@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -7,6 +7,7 @@ using AutoEverything.RoleEvaluation;
 using AutoEverything.AutoEquipment;
 using AutoEverything.AutoEquipment.Scoring;
 using AutoEverything.Allocation;
+using AutoEverything.AutoWork;
 
 namespace AutoEverything.UI
 {
@@ -109,7 +110,7 @@ namespace AutoEverything.UI
             labelKey = "AE_Tab";
 
             // 高度增加以容纳徽章区与状态摘要
-            size = new Vector2(360f, 560f);
+            size = new Vector2(360f, 600f);
         }
 
         public override bool IsVisible
@@ -139,8 +140,8 @@ namespace AutoEverything.UI
 
             Rect rect = new Rect(0f, 0f, size.x, size.y).ContractedBy(10f);
 
-            // 内容区高度 = 总高 - 两按钮区
-            Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (buttonHeight * 2 + buttonGap * 2));
+            // 内容区高度 = 总高 - 三按钮区
+            Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (buttonHeight * 3 + buttonGap * 3));
 
             // ===================== 缓存计算展示数据 =====================
             // FillTab 每帧调用，角色/情境/评级计算涉及技能与特质查询，缓存 60 tick 避免重复计算
@@ -358,6 +359,28 @@ namespace AutoEverything.UI
             }
             GUI.backgroundColor = prevBtnBg;
             TooltipHandler.TipRegion(buttonRect, "AE_TT_GlobalReallocate".Translate());
+
+            // 第三个按钮：全局工作重配（仅当 autoWorkEnabled=true 时显示）
+            if (AESettings.autoWorkEnabled)
+            {
+                Rect workBtnRect = new Rect(
+                    rect.x,
+                    buttonRect.yMax + buttonGap,
+                    rect.width,
+                    buttonHeight);
+
+                Color prevWorkBg = GUI.backgroundColor;
+                GUI.backgroundColor = ColorPrimaryBtnBg;
+                if (Widgets.ButtonText(workBtnRect, "AE_GlobalWorkReallocate".Translate()))
+                {
+                    int triggered = WorkAllocator.ReallocateAll();
+                    Messages.Message(
+                        "AE_GlobalWorkReallocateResult".Translate(triggered),
+                        MessageTypeDefOf.TaskCompletion);
+                }
+                GUI.backgroundColor = prevWorkBg;
+                TooltipHandler.TipRegion(workBtnRect, "AE_TT_GlobalWorkReallocate".Translate());
+            }
         }
 
         // ===================== Section 卡片绘制 =====================

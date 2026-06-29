@@ -23,6 +23,7 @@
 - `Source/AutoEverything/AutoEquipment/Scoring/Weapon/*` → `namespace AutoEverything.AutoEquipment.Scoring.Weapon`
 - `Source/AutoEverything/AutoEquipment/Scoring/Apparels/*` → `namespace AutoEverything.AutoEquipment.Scoring.Apparels`
 - `Source/AutoEverything/Allocation/*` → `namespace AutoEverything.Allocation`
+- `Source/AutoEverything/AutoWork/*` → `namespace AutoEverything.AutoWork`
 - `Source/AutoEverything/UI/*` → `namespace AutoEverything.UI`
 
 ### 模块职责
@@ -31,6 +32,7 @@
 - **RoleEvaluation**：角色与情境评价（`PawnRole`/`RoleDetector`、`GearContext`/`ContextDetector`、`CombatEvaluator`、`PawnStateCleaner`）
 - **AutoEquipment**：装备评分系统（`CompGearManager` Tick 入口、`GearScorer` 门面、`GearDefClassifier` 装备分类、`Scoring/` 评分管线与各 Scorer）
 - **Allocation**：全局分配策略（`GlobalAllocator`、`SidearmAllocator`、`BeltAllocator`、`PawnCombatProfile`）
+- **AutoWork**：自动工作优先级分配（`WorkAllocator`）
 - **UI**：玩家界面（`ITab_GearManager`、`Dialog_GlobalReallocate`、`PresetDetailsWindow`）
 
 未来扩展（自动药物/自动食物等）应在 `Source/AutoEverything/` 下新增独立模块文件夹，按上述命名空间约定扩展。

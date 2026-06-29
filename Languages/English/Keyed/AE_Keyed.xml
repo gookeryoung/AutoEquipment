@@ -213,4 +213,10 @@ By Combat Value: pure combat value desc, ignoring tier (high-skill pacifists may
   <AE_TT_LockGear>When checked, this colonist's gear is not auto-managed</AE_TT_LockGear>
   <AE_TT_OverrideRole>When checked, manually set role overrides auto detection</AE_TT_OverrideRole>
   <AE_TT_GlobalReallocate>Drop all colonist weapons and apparel, reallocate by combat value desc. Ghouls are skipped.</AE_TT_GlobalReallocate>
+
+  <!-- AutoWork -->
+  <AE_AutoWork>Auto Work Assignment</AE_AutoWork>
+  <AE_GlobalWorkReallocate>Global Work Reallocate</AE_GlobalWorkReallocate>
+  <AE_GlobalWorkReallocateResult>Reassigned work priorities for {0} colonists</AE_GlobalWorkReallocateResult>
+  <AE_TT_GlobalWorkReallocate>Reassign all colonists' work priorities by passion and tier. Auto-enables custom priorities. Emergency=1, passionate skills=2, hauling/cleaning by tier=1/3/4, unpassionate skills top 2=3.</AE_TT_GlobalWorkReallocate>
 </LanguageData>

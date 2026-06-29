@@ -9,7 +9,8 @@
 ## 编码规范
 
 - 强制中文优先
-- 遵循Karpathy 四原则, 需求模糊时先问我，不猜测隐含意图
+- 遵循 Karpathy 四原则：简单优于复杂（Simple > Complex）、删除优于扩展（Delete > Extend）、理解优于记忆（Understand > Memorize）、原型优于规划（Prototype > Plan）
+- 需求模糊时先问我，不猜测隐含意图
 - C# 注释用中文，解释「为什么」而非「做什么」
 - C# 命名空间: 与 MOD 名一致，PascalCase
 - C# 空值防御: 链式访问用 `?.`，禁止裸访问 `pawn.skills.X`
@@ -18,6 +19,15 @@
 - 翻译 Key: `Mod缩写_类别_名称`，禁止使用原生 Key
 - Scribe Key: 带 MOD 缩写前缀，避免与其他 MOD 冲突
 - 日志前缀 `[Mod缩写]`，异常用 `Log.ErrorOnce` 防重复，禁止静默吞异常
+
+## 代码组织
+
+- **单一职责**：一个类/文件只做一件事，参考 `BeltAllocator` 只管腰带、`CombatEvaluator` 只算战斗价值
+- **文件大小上限**：单文件超 500 行考虑拆分（参考 `SGSettings.cs` 拆分为 4 个文件的先例）
+- **模块边界**：跨命名空间引用必须显式 `using`，禁止循环依赖
+- **静态类模式**：无状态的分配器/评估器用 `static class` + 静态缓存字段，避免实例化开销与 GC
+- **命名空间与文件夹匹配**：`Source/ModName/Folder/*` → `namespace ModName.Folder`（IDE0130 规则）
+- **KISS 原则**：能用简单 if-else 解决的不要用策略模式，能用一个文件不要拆三个
 
 ## UI 与窗口
 
@@ -81,6 +91,15 @@
 - 缓存 TTL ≥ 2500 tick，状态变化时失效
 - 日志在 `if (debugActive)` 后短路，用 `Func<string>` 延迟构造避免字符串分配
 - 字符串比较用 `IndexOf(StringComparison.OrdinalIgnoreCase)` 替代 `ToUpperInvariant().Contains`
+
+## 错误处理与日志
+
+- **Tick 路径必须 try-catch 隔离**：单 Pawn 评估失败不影响其他 Pawn，参考 `CompGearManager.CompTick` 的 try-catch 模式
+- **`Log.ErrorOnce(message, id)` 防重复**：id 用 `thingIDNumber ^ salt`（salt 为固定常量），避免日志刷屏
+- **DLC API 调用必须异常隔离**：参考 `DLCCompat.cs`，`ModsConfig.XActive` 检查 + try-catch 包装
+- **禁止静默吞异常**：至少 `Log.Error` 记录，调试模式下用 `AEDebug.Log(Func<string>)` 延迟构造
+- **错误恢复**：优先降级而非崩溃——纹理加载失败回退纯色块，DLC API 异常返回 false 而非抛出
+- **去重 ID 规范**：每个错误点用独立 salt，如 `GhoulErrorIdBase = 0xA100`，避免跨方法冲突
 
 ## 兼容性
 
@@ -149,6 +168,28 @@
 - 提交信息必须包含变更类型（feat/fix/refactor/perf 等）
 - 提交信息简洁明了，不超过一段落
 - 提交前必须 `make check` 通过
+
+## 测试与验证
+
+### 编译验证
+
+- 每次修改 C#/XML/Makefile 后立即 `make check`
+- 大改动后用 `make rebuild-check` 完整重建
+- `-warnaserror` 把警告升级为错误，任何警告都需修复
+
+### 游戏内验证清单
+
+- 无 DLC 环境启动无报错（核心功能可用）
+- 有 DLC 环境功能正常（DLC 特性联动正确）
+- 旧存档加载不丢失数据（Scribe 兼容性）
+- 新建殖民地功能正常（从零开始无遗漏初始化）
+
+### 边界用例必测
+
+- 空地图（无殖民者、无装备时不崩溃）
+- 单殖民者（无候选池、无排序对比时不崩溃）
+- 全奴隶/全食尸鬼殖民地（过滤链生效）
+- 全征召状态（不中断战斗）
 
 ## 发布检查
 
