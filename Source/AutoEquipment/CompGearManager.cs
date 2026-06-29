@@ -68,20 +68,11 @@ namespace AutoEquipment
 
             // 兜底防御：旧存档可能已注入动物/机械族等不适用类别的 Comp，
             // 在此一次性移除并返回，避免 Tick 路径持续空转
+            // 场景：旧版本 CanManageGearDef 逻辑差异、其他 mod 冲突、玩家控制机械族（Mechinator DLC）
+            // 机械族/动物/昆虫被注入 comp 后，Tick 时访问 pawn.skills 等会抛 NRE
             if (!PawnSuitabilityChecker.CanManageGear(Pawn))
             {
                 // 静默移除：动物等不适用 Pawn 不应在装备管理中
-                if (parent.AllComps.Contains(this))
-                    parent.AllComps.Remove(this);
-                return;
-            }
-
-            // 兜底防御：CanManageGear 检查覆盖旧存档已注入异常 Comp 的情况
-            // 场景：旧版本 CanManageGearDef 逻辑差异、其他 mod 冲突、玩家控制机械族（Mechinator DLC）
-            // 机械族/动物/昆虫被注入 comp 后，Tick 时访问 pawn.skills 等会抛 NRE
-            // 必须在所有逻辑之前自移除，避免 Tick 持续空转与异常刷屏
-            if (!PawnSuitabilityChecker.CanManageGear(Pawn))
-            {
                 if (parent?.AllComps != null && parent.AllComps.Contains(this))
                     parent.AllComps.Remove(this);
                 return;

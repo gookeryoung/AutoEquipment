@@ -53,6 +53,22 @@ namespace AutoEquipment
             return dict;
         }
 
+        // ===================== 角色徽章图片缓存 =====================
+        // 路径：Textures/UI/Icons/Role/Role_{Brawler,Shooter,...}.png
+        private static readonly Dictionary<Role, Texture2D> roleBadgeTextures = LoadRoleBadgeTextures();
+
+        static Dictionary<Role, Texture2D> LoadRoleBadgeTextures()
+        {
+            var dict = new Dictionary<Role, Texture2D>();
+            foreach (Role r in System.Enum.GetValues(typeof(Role)))
+            {
+                string path = "UI/Icons/Role/Role_" + r;
+                Texture2D tex = ContentFinder<Texture2D>.Get(path, false);
+                if (tex != null) dict[r] = tex;
+            }
+            return dict;
+        }
+
         // ===================== 颜色常量 =====================
         // 集中定义避免散落的 new Color，便于统一调整与主题适配
         private static readonly Color ColorSectionBg = new Color(0.18f, 0.20f, 0.22f, 0.45f);
@@ -413,8 +429,16 @@ namespace AutoEquipment
             float x = badgeRow.x;
 
             // 1. 角色徽章 + Tooltip（判定规则）
+            // 优先使用图片徽章（UI/Icons/Role/Role_X），无图时回退纯色块
             Rect roleRect = new Rect(x, y, badgeWidth, h);
-            DrawBadge(roleRect, ("AE_Role_" + role).Translate(), GetRoleColor(role));
+            if (roleBadgeTextures.TryGetValue(role, out Texture2D roleTex))
+            {
+                DrawRoleBadgeWithIcon(roleRect, roleTex, GetRoleColor(role), ("AE_Role_" + role).Translate());
+            }
+            else
+            {
+                DrawBadge(roleRect, ("AE_Role_" + role).Translate(), GetRoleColor(role));
+            }
             TooltipHandler.TipRegion(roleRect, ("AE_TT_Role_" + role).Translate());
             x += badgeWidth + gap;
 
@@ -518,6 +542,52 @@ namespace AutoEquipment
             // 右侧字母（图标内已含字母，此处留空避免重复，仅保持布局）
             Text.Anchor = TextAnchor.UpperLeft;
 
+            GUI.color = prevColor;
+            GUI.backgroundColor = prevBg;
+        }
+
+        /// <summary>
+        /// 绘制带图标的角色徽章：左侧小圆图标 + 右侧中文角色名。
+        /// 与评级徽章不同——角色图标内无文字，需在图标右侧显示角色名（如"格斗者"）。
+        /// </summary>
+        private void DrawRoleBadgeWithIcon(Rect rect, Texture2D icon, Color bgColor, string label)
+        {
+            Color prevColor = GUI.color;
+            Color prevBg = GUI.backgroundColor;
+            TextAnchor prevAnchor = Text.Anchor;
+
+            // 半透明底色
+            Color bg = bgColor;
+            bg.a = 0.85f;
+            Widgets.DrawBoxSolid(rect, bg);
+
+            // 边框
+            GUI.color = Color.white * 0.5f;
+            Widgets.DrawBox(rect, 1);
+
+            // 左侧图标：正方形，边长 = 徽章高度 - 4
+            float iconSize = rect.height - 4f;
+            Rect iconRect = new Rect(rect.x + 3f, rect.y + 2f, iconSize, iconSize);
+            GUI.color = Color.white;
+            if (icon != null)
+            {
+                GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
+            }
+
+            // 右侧角色名：图标右侧剩余空间，垂直居中
+            float labelX = iconRect.xMax + 4f;
+            float labelWidth = rect.xMax - labelX - 3f;
+            if (labelWidth > 0f)
+            {
+                Rect labelRect = new Rect(labelX, rect.y, labelWidth, rect.height);
+                Text.Anchor = TextAnchor.MiddleLeft;
+                Text.Font = GameFont.Tiny;
+                GUI.color = Color.white;
+                Widgets.Label(labelRect, label);
+                Text.Font = GameFont.Small;
+            }
+
+            Text.Anchor = prevAnchor;
             GUI.color = prevColor;
             GUI.backgroundColor = prevBg;
         }

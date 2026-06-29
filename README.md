@@ -362,8 +362,14 @@ Source/AutoEquipment/
 ├── GearContext.cs             # 情境检测
 ├── PawnRole.cs                # 角色检测
 ├── PawnSuitabilityChecker.cs  # Pawn 适配性过滤
-├── DLCCompat.cs                # DLC API 安全包装
-├── SidearmAllocator.cs        # 副武器全局分配
+├── DLCCompat.cs               # DLC API 安全包装
+├── SidearmAllocator.cs        # 副武器全局分配 + 战斗价值/评级计算
+├── BeltAllocator.cs           # 腰带附件全局分配（护盾腰带/消防背包）
+├── GlobalAllocator.cs         # 全局装备重配（手动触发）
+├── Dialog_GlobalReallocate.cs # 全局重配规则对话框
+├── GearDefClassifier.cs       # 装备 Def 分类工具（武器/防具/腰带识别）
+├── PawnStateCleaner.cs        # Pawn 状态清理工具（异常装备/无效引用）
+├── PawnCombatProfile.cs       # Pawn 战斗画像（技能/特质/兴趣聚合）
 ├── DebugHelper.cs             # AEDebug 日志工具
 ├── DebugMonitor.cs            # 调试监测
 ├── SGSettings.cs              # 设置窗口与持久化
@@ -376,8 +382,8 @@ Source/AutoEquipment/
     ├── GearWeights.cs         # 权重结构 + 4 预设
     ├── GearPreset.cs          # 预设枚举
     ├── GearPolicyEngine.cs    # 策略调度
-    ├── Weapon/                # 9 个武器 Scorer
-    └── Apparels/              # 11 个防具 Scorer
+    ├── Weapon/                # 9 个武器 Scorer + 1 个 RangeHelper
+    └── Apparels/              # 12 个防具 Scorer
 ```
 
 ### 评估周期
@@ -387,7 +393,10 @@ Source/AutoEquipment/
 | `CompTick` 主评估 | `evaluateInterval`（默认 500 tick ≈ 8 秒） | 武器/防具/药品/副武器 |
 | 征召副武器检查 | 30 tick | 战斗紧迫，需快速切近战 |
 | `SidearmAllocator` | 2000 tick | 全局副武器分配 |
-| 角色缓存 | `RoleCacheInterval` | 避免每 tick 重复检测 |
+| `BeltAllocator` | 3000 tick | 全局腰带附件分配（护盾腰带/消防背包） |
+| 角色缓存 | `RoleCacheInterval`（2500 tick） | 避免每 tick 重复检测 |
+| 检视面板缓存 | 60 tick | ITab 角色徽章/数值摘要刷新 |
+| 死亡 Pawn 字典清理 | 60000 tick | `RoleDetector`/`ContextDetector` 残留条目清理 |
 
 所有周期都通过 `(TicksGame + thingIDNumber) % interval` 分散，避免所有 Pawn 同 tick 触发卡顿。
 
@@ -448,10 +457,11 @@ Source/AutoEquipment/
 |------|------|------|
 | Preview | `About/Preview.png` | Steam Workshop 预览图 |
 | ModIcon | `Textures/UI/Icons/ModIcon.png` | Mod 列表图标（`About.xml` 的 `modIconPath`） |
+| 标题图标 | `Textures/UI/Icons/AutoEquipmentTitle.png` | 面板/文档标题装饰 |
 | 评级徽章 | `Textures/UI/Icons/Tier/Tier_{S,A,B,C,D,X}.png` | ITab 评级徽章，替代纯色块 |
-| 角色徽章 | `Textures/UI/Icons/Role/Role_{Brawler,Shooter,...}.png` | 角色图标（备用，未接入代码） |
+| 角色徽章 | `Textures/UI/Icons/Role/Role_{Brawler,Shooter,Doctor,Hunter,Worker,Pacifist,Leader,Default}.png` | ITab 角色徽章，左侧图标 + 右侧角色名 |
 
-评级徽章在 ITab 中优先加载，无图时回退纯色块 + 字母。
+评级徽章与角色徽章均在 ITab 静态加载（`ContentFinder<Texture2D>.Get(path, false)`），无图时回退纯色块 + 文字。角色徽章因图标内无文字，绘制时在图标右侧显示中文角色名（`DrawRoleBadgeWithIcon`）。
 
 ## 构建
 
@@ -462,6 +472,29 @@ make rebuild-check  # 完整重建后检查
 ```
 
 要求 `.NET` SDK 与 RimWorld 1.6 的 `Assembly-CSharp.dll` 引用路径已配置。
+
+## 文档同步检查清单
+
+修改以下任一代码/规则时，**必须同步更新本 README 对应章节**，否则视为未完成：
+
+| 修改的代码 | 同步的 README 章节 |
+|-----------|-------------------|
+| `PawnRole.cs` / `RoleDetector` | `## 角色检测规则` 表格 |
+| `GearContext.cs` / `ContextDetector` | `## 情境检测规则` 表格 |
+| `GearWeights.cs` | `## 评分模型 → 权重预设方案` |
+| `ScoringPipelineFactory.cs` | `## 武器评分管线` / `## 防具评分管线` 表格 |
+| 任一 `IScorer` 实现的加分公式 | 对应 Scorer 的"说明"列与 `## 总分公式` |
+| `SidearmAllocator.cs` | `## 副武器全局分配` 与公式块 |
+| `BeltAllocator.cs` | `## 腰带附件全局分配` |
+| `GearPreset.cs` / `GearPolicyEngine.cs` | `## 权重预设方案` 表格 |
+| `CompGearManager.cs` Tick 路径 | `## 评估周期` 表格 |
+| `WeaponSkillScorer.cs` / `WeaponTraitScorer.cs` | `## 主武器选择规则` 表格 |
+| `PawnRole.cs` / `GetArmorPreference` | `## 护甲偏好` 表格 |
+| 设计原则（不适用 Pawn 处理） | `## 设计原则：逻辑杜绝而非事后清理` |
+| `GlobalAllocator.cs` / `Dialog_GlobalReallocate.cs` | `## 全局重配` 与 `### 保护规则` |
+| `SGSettings.cs` 排序相关 | `### 殖民者栏默认排序` 表格 |
+| 新增/删除源文件 | `### 目录结构` 代码块 |
+| 新增图片资源 | `## 图片资源` 表格 |
 
 ## 许可证
 

@@ -10,7 +10,7 @@
 - Harmony ID: `gookeryoung.autoequipment`（与 packageId 一致，整个 MOD 单一实例）
 - 日志前缀: `[AutoEquipment]`
 - Scribe Key 前缀: `ae_`（如 `ae_locked`、`ae_customTierEntries`）
-- 设置界面显示名: `中文自动装备`（非 `AUTOEQUIPMENT`）
+- 设置界面显示名: `自动装备`（中英文统一，禁止用全大写 `AUTOEQUIPMENT`）
 
 ## 命名空间与文件夹结构
 
