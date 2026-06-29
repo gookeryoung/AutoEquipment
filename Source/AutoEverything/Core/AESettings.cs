@@ -2,27 +2,13 @@ using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
-using AutoEverything.Scoring;
+using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
+using AutoEverything.AutoEquipment.Scoring;
+using AutoEverything.UI;
 
-namespace AutoEverything
+namespace AutoEverything.Core
 {
-    /// <summary>
-    /// 殖民者栏默认排序方式。
-    /// 设计：玩家在 Mod 选项里配置默认排序，ITab 的"全局人物评级"按钮
-    /// 一键应用评级前缀并按此排序重排殖民者栏。
-    /// </summary>
-    public enum ColonistBarSortMode : byte
-    {
-        /// <summary>不排序：仅应用评级前缀，保留殖民者栏原顺序</summary>
-        None = 0,
-        /// <summary>按评级降序（S→A→B→C→D→X），同档内按战斗价值降序</summary>
-        ByTierThenValue = 1,
-        /// <summary>按角色分组（格斗者→射手→医生→工人→无暴力者→猎人→领袖），同角色内按评级降序</summary>
-        ByRoleThenTier = 2,
-        /// <summary>仅按战斗价值降序（不区分评级，高技能和平主义者可能挤占前列）</summary>
-        ByCombatValue = 3
-    }
-
     public class AESettings : ModSettings
     {
         // 主开关
@@ -161,7 +147,7 @@ namespace AutoEverything
                 }
 
                 // 计算当前系统评级
-                CombatTier tier = SidearmAllocator.GetAutoCombatTier(pawn);
+                CombatTier tier = CombatEvaluator.GetAutoCombatTier(pawn);
                 string newNick = tier + TIER_TAG_PREFIX_SEPARATOR + cleanNick;
 
                 if (newNick != currentNick)
@@ -312,11 +298,11 @@ namespace AutoEverything
         private static int ComparePawnByTierThenValueDesc(Pawn a, Pawn b)
         {
             // CombatTier 枚举值：X=0, D=1, C=2, B=3, A=4, S=5，降序即 S 在前
-            CombatTier ta = SidearmAllocator.GetCombatTier(a);
-            CombatTier tb = SidearmAllocator.GetCombatTier(b);
+            CombatTier ta = CombatEvaluator.GetCombatTier(a);
+            CombatTier tb = CombatEvaluator.GetCombatTier(b);
             if (ta != tb) return tb.CompareTo(ta);
-            float va = SidearmAllocator.ComputeCombatValue(a);
-            float vb = SidearmAllocator.ComputeCombatValue(b);
+            float va = CombatEvaluator.ComputeCombatValue(a);
+            float vb = CombatEvaluator.ComputeCombatValue(b);
             return vb.CompareTo(va);
         }
 
@@ -327,8 +313,8 @@ namespace AutoEverything
         /// </summary>
         private static int ComparePawnByCombatValueOnlyDesc(Pawn a, Pawn b)
         {
-            float va = SidearmAllocator.ComputeCombatValue(a);
-            float vb = SidearmAllocator.ComputeCombatValue(b);
+            float va = CombatEvaluator.ComputeCombatValue(a);
+            float vb = CombatEvaluator.ComputeCombatValue(b);
             return vb.CompareTo(va);
         }
 
@@ -731,71 +717,6 @@ namespace AutoEverything
             r.End();
 
             Widgets.EndScrollView();
-        }
-    }
-
-    public class AutoEverythingMod : Mod
-    {
-        public static AESettings settings;
-
-        public AutoEverythingMod(ModContentPack content) : base(content)
-        {
-            settings = GetSettings<AESettings>();
-        }
-
-        public override void DoSettingsWindowContents(Rect inRect)
-        {
-            AESettings.DrawSettings(inRect);
-        }
-
-        public override string SettingsCategory() => "AE_SettingsCategory".Translate();
-    }
-
-    /// <summary>
-    /// 预设方案详情窗口：显示当前预设权重并允许微调。
-    /// </summary>
-    public class PresetDetailsWindow : Window
-    {
-        // static 保持滚动位置：窗口关闭再打开时恢复上次位置，符合用户体验
-        private static Vector2 scrollPos = Vector2.zero;
-
-        public override Vector2 InitialSize => new Vector2(420f, 480f);
-
-        public PresetDetailsWindow()
-        {
-            doCloseX = true;
-            closeOnClickedOutside = true;
-            absorbInputAroundWindow = true;
-            forcePause = false;
-        }
-
-        public override void DoWindowContents(Rect inRect)
-        {
-            Listing_Standard l = new Listing_Standard();
-            l.Begin(inRect);
-
-            Text.Font = GameFont.Medium;
-            l.Label("AE_Preset_Details".Translate());
-            Text.Font = GameFont.Small;
-            l.Gap();
-
-            // 显示当前预设
-            l.Label("AE_Preset".Translate() + ": " + ("AE_Preset_" + GearPolicyEngine.ActivePreset).Translate());
-            l.GapLine();
-
-            // 显示该预设的默认权重
-            GearWeights defaultW = GearPolicyEngine.ActivePreset.GetDefaultWeights();
-            l.Label("AE_Preset_DefaultWeights".Translate());
-            l.Label($"  {("AE_Weight_Skill".Translate())}: {defaultW.w_skill:F1}");
-            l.Label($"  {("AE_Weight_DPS".Translate())}: {defaultW.w_dps:F1}");
-            l.Label($"  {("AE_Weight_Range".Translate())}: {defaultW.w_range:F1}");
-            l.Label($"  {("AE_Weight_Quality".Translate())}: {defaultW.w_quality:F1}");
-            l.Label($"  {("AE_Weight_Armor".Translate())}: {defaultW.w_armor:F1}");
-            l.Label($"  {("AE_Weight_Insulation".Translate())}: {defaultW.w_insulation:F1}");
-            l.Label($"  {("AE_Weight_MoveSpeed".Translate())}: {defaultW.w_movespeed:F1}");
-            l.Label($"  {("AE_Weight_WorkSpeed".Translate())}: {defaultW.w_workspeed:F1}");
-
-            l.End();
         }
     }
 }
