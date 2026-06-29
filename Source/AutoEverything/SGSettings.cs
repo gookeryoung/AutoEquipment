@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
-using AutoEquipment.Scoring;
+using AutoEverything.Scoring;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 殖民者栏默认排序方式。
@@ -734,11 +734,11 @@ namespace AutoEquipment
         }
     }
 
-    public class AutoEquipmentMod : Mod
+    public class AutoEverythingMod : Mod
     {
         public static AESettings settings;
 
-        public AutoEquipmentMod(ModContentPack content) : base(content)
+        public AutoEverythingMod(ModContentPack content) : base(content)
         {
             settings = GetSettings<AESettings>();
         }

@@ -1,25 +1,25 @@
-# AutoEquipment 项目专属规则
+# AutoEverything 项目专属规则
 
-> 本文件为 AutoEquipment MOD 的项目专属规则，补充通用规则（rimworld-mod-dev.md）。
+> 本文件为 AutoEverything MOD 的项目专属规则，补充通用规则（rimworld-mod-dev.md）。
 > 两者叠加生效，通用规则未覆盖的项目特定约定在此声明。
 
 ## 项目标识
 
-- MOD 名: `AutoEquipment`
-- `packageId`: `gookeryoung.autoequipment`（发布后不可改）
-- Harmony ID: `gookeryoung.autoequipment`（与 packageId 一致，整个 MOD 单一实例）
-- 日志前缀: `[AutoEquipment]`
+- MOD 名: `AutoEverything`
+- `packageId`: `gookeryoung.autoeverything`（发布后不可改）
+- Harmony ID: `gookeryoung.autoeverything`（与 packageId 一致，整个 MOD 单一实例）
+- 日志前缀: `[AutoEverything]`
 - Scribe Key 前缀: `ae_`（如 `ae_locked`、`ae_customTierEntries`）
-- 设置界面显示名: `自动装备`（中英文统一，禁止用全大写 `AUTOEQUIPMENT`）
+- 设置界面显示名: `自动装备`（中英文统一，禁止用全大写 `AUTOEVERYTHING`）
 
 ## 命名空间与文件夹结构
 
 命名空间必须与文件夹结构匹配（IDE0130 规则）：
 
-- `Source/AutoEquipment/*` → `namespace AutoEquipment`
-- `Source/AutoEquipment/Scoring/*` → `namespace AutoEquipment.Scoring`
-- `Source/AutoEquipment/Scoring/Weapon/*` → `namespace AutoEquipment.Scoring.Weapon`
-- `Source/AutoEquipment/Scoring/Apparels/*` → `namespace AutoEquipment.Scoring.Apparels`
+- `Source/AutoEverything/*` → `namespace AutoEverything`
+- `Source/AutoEverything/Scoring/*` → `namespace AutoEverything.Scoring`
+- `Source/AutoEverything/Scoring/Weapon/*` → `namespace AutoEverything.Scoring.Weapon`
+- `Source/AutoEverything/Scoring/Apparels/*` → `namespace AutoEverything.Scoring.Apparels`
 
 跨命名空间引用必须显式 `using`，禁止依赖 IDE 自动补全。
 

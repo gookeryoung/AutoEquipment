@@ -2,7 +2,7 @@ using System;
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// DLC 兼容性检测工具：集中包装所有 DLC 特定 API，
@@ -31,7 +31,7 @@ namespace AutoEquipment
             {
                 // 规则要求：异常用 Log.ErrorOnce 防重复，不能静默吞异常
                 // 食尸鬼判定失败可能导致食尸鬼被错误注入 Comp，违反设计原则
-                Log.ErrorOnce("[AutoEquipment] DLCCompat.IsGhoul 异常: " + ex.Message,
+                Log.ErrorOnce("[AutoEverything] DLCCompat.IsGhoul 异常: " + ex.Message,
                     (pawn?.thingIDNumber ?? 0) ^ GhoulErrorIdBase);
                 return false;
             }
@@ -46,7 +46,7 @@ namespace AutoEquipment
             try { return pawn.IsSlave; }
             catch (Exception ex)
             {
-                Log.ErrorOnce("[AutoEquipment] DLCCompat.IsSlave 异常: " + ex.Message,
+                Log.ErrorOnce("[AutoEverything] DLCCompat.IsSlave 异常: " + ex.Message,
                     (pawn?.thingIDNumber ?? 0) ^ SlaveErrorIdBase);
                 return false;
             }
@@ -61,7 +61,7 @@ namespace AutoEquipment
             try { return !pawn.DevelopmentalStage.Adult(); }
             catch (Exception ex)
             {
-                Log.ErrorOnce("[AutoEquipment] DLCCompat.IsChild 异常: " + ex.Message,
+                Log.ErrorOnce("[AutoEverything] DLCCompat.IsChild 异常: " + ex.Message,
                     (pawn?.thingIDNumber ?? 0) ^ ChildErrorIdBase);
                 return false;
             }

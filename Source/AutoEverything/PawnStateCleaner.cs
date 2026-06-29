@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 字典状态清理工具：统一处理按 Pawn ID 索引的字典中已死亡/离开的 Pawn 残留条目。

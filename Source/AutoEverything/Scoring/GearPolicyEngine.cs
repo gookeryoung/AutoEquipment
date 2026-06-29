@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring
+namespace AutoEverything.Scoring
 {
     /// <summary>
     /// 装备策略调度层：根据全局预设方案返回对应权重。
@@ -23,7 +23,7 @@ namespace AutoEquipment.Scoring
         {
             if (ActivePreset == preset) return;
             ActivePreset = preset;
-            Log.Message($"[AutoEquipment] 全局方案切换: {preset}");
+            Log.Message($"[AutoEverything] 全局方案切换: {preset}");
         }
 
         /// <summary>

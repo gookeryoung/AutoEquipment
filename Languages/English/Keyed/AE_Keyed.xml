@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
   <!-- Tab -->
-  <AE_Tab>Auto Equipment</AE_Tab>
-  <AE_TabTitle>Auto Equipment</AE_TabTitle>
-  <AE_SettingsCategory>Auto Equipment</AE_SettingsCategory>
+  <AE_Tab>Auto Everything</AE_Tab>
+  <AE_TabTitle>Auto Everything</AE_TabTitle>
+  <AE_SettingsCategory>Auto Everything</AE_SettingsCategory>
 
   <!-- Roles -->
   <AE_Role_Default>Default</AE_Role_Default>
@@ -27,7 +27,7 @@
   <AE_CurrentRole>Current Role</AE_CurrentRole>
   <AE_CurrentContext>Current Context</AE_CurrentContext>
   <AE_LockGear>Lock Gear</AE_LockGear>
-  <AE_LockGear_Desc>Prevents Auto Equipment from managing this pawn's gear.</AE_LockGear_Desc>
+  <AE_LockGear_Desc>Prevents Auto Everything from managing this pawn's gear.</AE_LockGear_Desc>
   <AE_OverrideRole>Override Role</AE_OverrideRole>
   <AE_PrimaryWeapon>Primary Weapon</AE_PrimaryWeapon>
   <AE_Sidearm>Sidearm</AE_Sidearm>
@@ -36,7 +36,7 @@
   <AE_Role>Role</AE_Role>
 
   <!-- Settings -->
-  <AE_Enabled>Enable Auto Equipment</AE_Enabled>
+  <AE_Enabled>Enable Auto Everything</AE_Enabled>
   <AE_AutoSystems>Automatic Systems</AE_AutoSystems>
   <AE_AutoWeapons>Auto-manage weapons</AE_AutoWeapons>
   <AE_AutoApparel>Auto-manage apparel</AE_AutoApparel>

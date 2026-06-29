@@ -1,7 +1,7 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring
+namespace AutoEverything.Scoring
 {
     /// <summary>
     /// 评分策略接口：所有评分维度（技能、特质、情境、DPS 等）实现此接口。

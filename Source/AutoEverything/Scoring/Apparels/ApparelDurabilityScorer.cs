@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具耐久修正：损坏的防具按 HP 比例扣分。

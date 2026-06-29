@@ -2,7 +2,7 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 全局重配规则确认对话框。

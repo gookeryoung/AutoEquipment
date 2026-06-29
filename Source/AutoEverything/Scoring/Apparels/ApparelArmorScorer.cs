@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具护甲评分：基础防护值。

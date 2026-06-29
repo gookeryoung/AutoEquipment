@@ -1,7 +1,7 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Weapon
+namespace AutoEverything.Scoring.Weapon
 {
     /// <summary>
     /// 武器特质评分：基于 Pawn 的特质直接驱动评分。

@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具皇家头衔评分：满足头衔要求的防具加分。

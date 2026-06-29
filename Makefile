@@ -1,10 +1,10 @@
-# AutoEquipment MOD 构建脚本
+# AutoEverything MOD 构建脚本
 # 使用 GNU Make 或 make for Windows 调用
 
 # 项目路径
-PROJECT := Source/AutoEquipment/AutoEquipment.csproj
+PROJECT := Source/AutoEverything/AutoEverything.csproj
 CONFIG := Release
-OUTPUT := Assemblies/AutoEquipment.dll
+OUTPUT := Assemblies/AutoEverything.dll
 
 # .NET 命令
 # -clp:Force 强制刷新控制台输出，避免在 Trae IDE 终端中缓冲卡死
@@ -47,7 +47,7 @@ rebuild-check: clean check
 
 # 查看可用目标
 help:
-	echo AutoEquipment Makefile 目标:
+	echo AutoEverything Makefile 目标:
 	echo   make build          构建项目 (默认)
 	echo   make check          验证零警告零错误 (规则强制)
 	echo   make clean         清理构建产物

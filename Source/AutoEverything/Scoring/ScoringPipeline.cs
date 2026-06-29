@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring
+namespace AutoEverything.Scoring
 {
     /// <summary>
     /// 评分管线：按顺序执行所有 IScorer 策略，累加分数到 ScoreBreakdown。
@@ -69,7 +69,7 @@ namespace AutoEquipment.Scoring
                 catch (System.Exception ex)
                 {
                     // 单个 Scorer 失败不应中断整个管线
-                    Log.WarningOnce($"[AutoEquipment] 评分器 {scorers[i].Name} 失败: {ex.Message}",
+                    Log.WarningOnce($"[AutoEverything] 评分器 {scorers[i].Name} 失败: {ex.Message}",
                         pawn.thingIDNumber ^ gear.thingIDNumber ^ i);
                 }
             }

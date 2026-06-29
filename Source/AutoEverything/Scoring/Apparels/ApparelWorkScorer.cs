@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具工作加成评分：医生偏好医疗加成，工人偏好工作速度。

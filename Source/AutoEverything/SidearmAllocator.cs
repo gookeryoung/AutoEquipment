@@ -4,7 +4,7 @@ using RimWorld;
 using Verse;
 using Verse.AI;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 殖民者战斗价值档次（用于全局重配优先级与 DEBUG 显示）。
@@ -650,7 +650,7 @@ namespace AutoEquipment
             pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
             // 决策日志：玩家可见的换装反馈（低频，受全局周期控制）
-            Log.Message($"[AutoEquipment] 副武器分配: {AEDebug.Label(pawn)} (战斗价值={ComputeCombatValue(pawn):F1}) ← {weapon.LabelShort} (score={score:F1})");
+            Log.Message($"[AutoEverything] 副武器分配: {AEDebug.Label(pawn)} (战斗价值={ComputeCombatValue(pawn):F1}) ← {weapon.LabelShort} (score={score:F1})");
         }
     }
 }

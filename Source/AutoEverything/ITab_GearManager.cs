@@ -3,7 +3,7 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// Pawn 检视面板的自定义标签页：展示角色、情境、装备状态与自定义评级。

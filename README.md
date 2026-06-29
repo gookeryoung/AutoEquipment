@@ -1,8 +1,8 @@
-# Auto Equipment
+# Auto Everything
 
 > 智能自动装备管理 MOD，适用于 RimWorld 1.6+
 >
-> packageId: `gookeryoung.autoequipment`
+> packageId: `gookeryoung.autoeverything`
 
 殖民者会根据自身**角色**与**情境**，自动挑选最合适的武器、防具与副武器，并按需携带药品。
 
@@ -353,8 +353,8 @@
 ### 目录结构
 
 ```
-Source/AutoEquipment/
-├── AutoEquipment.csproj       # C# 7.3 项目文件
+Source/AutoEverything/
+├── AutoEverything.csproj       # C# 7.3 项目文件
 ├── ModController.cs           # MOD 入口，StaticConstructorOnStartup
 ├── HarmonyPatches.cs          # Harmony 补丁：Comp 注入 + 取消征召恢复
 ├── CompGearManager.cs         # ThingComp，Tick 入口与评估协调
@@ -457,7 +457,7 @@ Source/AutoEquipment/
 |------|------|------|
 | Preview | `About/Preview.png` | Steam Workshop 预览图 |
 | ModIcon | `Textures/UI/Icons/ModIcon.png` | Mod 列表图标（`About.xml` 的 `modIconPath`） |
-| 标题图标 | `Textures/UI/Icons/AutoEquipmentTitle.png` | 面板/文档标题装饰 |
+| 标题图标 | `Textures/UI/Icons/AutoEverythingTitle.png` | 面板/文档标题装饰 |
 | 评级徽章 | `Textures/UI/Icons/Tier/Tier_{S,A,B,C,D,X}.png` | ITab 评级徽章，替代纯色块 |
 | 角色徽章 | `Textures/UI/Icons/Role/Role_{Brawler,Shooter,Doctor,Hunter,Worker,Pacifist,Leader,Default}.png` | ITab 角色徽章，左侧图标 + 右侧角色名 |
 

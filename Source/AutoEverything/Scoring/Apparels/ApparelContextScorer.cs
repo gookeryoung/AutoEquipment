@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具情境评分：根据温度情境调整保温/护甲权重。

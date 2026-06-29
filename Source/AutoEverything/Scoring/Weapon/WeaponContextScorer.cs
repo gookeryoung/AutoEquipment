@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Weapon
+namespace AutoEverything.Scoring.Weapon
 {
     /// <summary>
     /// 武器情境评分：根据当前情境调整武器偏好。

@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具意识形态评分：角色配套防具与风格匹配。
@@ -34,7 +34,7 @@ namespace AutoEquipment.Scoring.Apparels
             catch (Exception ex)
             {
                 // 评分失败不应中断流程，记录后继续
-                Log.WarningOnce($"[AutoEquipment] 意识形态防具评分失败: {ex.Message}",
+                Log.WarningOnce($"[AutoEverything] 意识形态防具评分失败: {ex.Message}",
                     pawn.thingIDNumber ^ 0x4C7A);
             }
         }

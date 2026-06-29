@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 战斗画像工具：统一判定 Pawn 的战斗行为画像。

@@ -2,7 +2,7 @@ using System;
 using Verse;
 using RimWorld;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// MOD 启动引导类：游戏加载时由 RimWorld 自动调用静态构造函数。
@@ -19,7 +19,7 @@ namespace AutoEquipment
             HarmonyPatches.Init();
             HarmonyPatches.AddCompToPawnDefs();
             ValidateTranslationKeys();
-            Log.Message("[AutoEquipment] MOD 已初始化（Harmony + ThingComp 注入完成）");
+            Log.Message("[AutoEverything] MOD 已初始化（Harmony + ThingComp 注入完成）");
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace AutoEquipment
                 string key = "AE_Role_" + role;
                 if (!key.CanTranslate())
                 {
-                    Log.Warning($"[AutoEquipment] 缺少翻译键: {key}（Role 枚举 {role}）");
+                    Log.Warning($"[AutoEverything] 缺少翻译键: {key}（Role 枚举 {role}）");
                 }
             }
 
@@ -45,7 +45,7 @@ namespace AutoEquipment
                 string key = "AE_Context_" + ctx;
                 if (!key.CanTranslate())
                 {
-                    Log.Warning($"[AutoEquipment] 缺少翻译键: {key}（GearContext 枚举 {ctx}）");
+                    Log.Warning($"[AutoEverything] 缺少翻译键: {key}（GearContext 枚举 {ctx}）");
                 }
             }
 
@@ -55,7 +55,7 @@ namespace AutoEquipment
                 string key = "AE_SortMode_" + mode;
                 if (!key.CanTranslate())
                 {
-                    Log.Warning($"[AutoEquipment] 缺少翻译键: {key}（ColonistBarSortMode 枚举 {mode}）");
+                    Log.Warning($"[AutoEverything] 缺少翻译键: {key}（ColonistBarSortMode 枚举 {mode}）");
                 }
             }
         }

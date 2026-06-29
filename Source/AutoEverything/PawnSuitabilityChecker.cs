@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// Pawn 适配性检查工具：集中判断 Pawn/ThingDef 是否适合装备管理。

@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Weapon
+namespace AutoEverything.Scoring.Weapon
 {
     /// <summary>
     /// 武器伤害输出评分：近战看 DPS，远程看伤害倍率与冷却。

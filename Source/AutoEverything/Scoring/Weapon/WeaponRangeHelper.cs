@@ -1,6 +1,6 @@
-﻿using Verse;
+using Verse;
 
-namespace AutoEquipment.Scoring.Weapon
+namespace AutoEverything.Scoring.Weapon
 {
     /// <summary>
     /// 武器射程查询工具：用 for 循环替代 LINQ FirstOrDefault，避免 Tick 路径分配闭包。

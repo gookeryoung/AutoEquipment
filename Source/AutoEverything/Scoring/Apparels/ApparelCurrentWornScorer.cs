@@ -1,7 +1,7 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具当前穿戴加成：小幅加成作为平局决胜，防止近乎相同评分的反复切换。

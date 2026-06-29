@@ -1,7 +1,7 @@
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Weapon
+namespace AutoEverything.Scoring.Weapon
 {
     /// <summary>
     /// 武器技能评分：基于技能等级与兴趣度（火焰）。

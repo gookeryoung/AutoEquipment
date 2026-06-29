@@ -1,8 +1,8 @@
 using RimWorld;
 using Verse;
-using AutoEquipment.Scoring;
+using AutoEverything.Scoring;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 装备评分器：重构为管线调度入口。
@@ -33,7 +33,7 @@ namespace AutoEquipment
             // 仅在可疑评分且开启调试时才重新走 WithBreakdown 取明细
             if (score <= 0f && (weapon.def.IsRangedWeapon || weapon.def.IsMeleeWeapon))
             {
-                Log.WarningOnce($"[AutoEquipment] ScoreWeapon 可疑评分 {score:F1}: {pawn.LabelShort} + '{weapon.def.defName}' (role={role}, context={context})",
+                Log.WarningOnce($"[AutoEverything] ScoreWeapon 可疑评分 {score:F1}: {pawn.LabelShort} + '{weapon.def.defName}' (role={role}, context={context})",
                     pawn.thingIDNumber ^ weapon.thingIDNumber);
                 if (AEDebug.IsActive)
                 {
@@ -80,7 +80,7 @@ namespace AutoEquipment
             // 可疑评分：非沾染却得负分（WarningOnce 防刷屏，详细报告走调试开关）
             if (score <= 0f && !apparel.WornByCorpse)
             {
-                Log.WarningOnce($"[AutoEquipment] ScoreApparel 可疑评分 {score:F1}: {pawn.LabelShort} + '{apparel.def.defName}' (role={role}, context={context})",
+                Log.WarningOnce($"[AutoEverything] ScoreApparel 可疑评分 {score:F1}: {pawn.LabelShort} + '{apparel.def.defName}' (role={role}, context={context})",
                     pawn.thingIDNumber ^ apparel.thingIDNumber);
                 if (AEDebug.IsActive)
                 {

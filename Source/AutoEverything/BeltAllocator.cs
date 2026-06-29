@@ -3,7 +3,7 @@ using RimWorld;
 using Verse;
 using Verse.AI;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 腰带附件全局分配器：为纯近战角色（射击无火）分配护盾腰带或消防背包。
@@ -192,7 +192,7 @@ namespace AutoEquipment
             var job = JobMaker.MakeJob(JobDefOf.Wear, belt);
             pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
-            Log.Message($"[AutoEquipment] 腰带分配: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
+            Log.Message($"[AutoEverything] 腰带分配: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
         }
 
         // ===================== 判定辅助 =====================

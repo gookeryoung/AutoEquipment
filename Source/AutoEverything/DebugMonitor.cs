@@ -1,8 +1,8 @@
 using RimWorld;
 using Verse;
-using AutoEquipment.Scoring;
+using AutoEverything.Scoring;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 调试监测系统：向玩家/开发者展示装备评分与换装事件。
@@ -88,7 +88,7 @@ namespace AutoEquipment
                 float diff = candidateScore - currentScore;
                 float pct = currentScore > 0 ? (diff / currentScore * 100f) : 0f;
 
-                Log.Message($"[AutoEquipment] {AEDebug.Label(pawn)} 武器评分对比:\n" +
+                Log.Message($"[AutoEverything] {AEDebug.Label(pawn)} 武器评分对比:\n" +
                             $"  候选 {candidate.LabelShort}: {candidateScore:+0.0;-0.0;0.0}\n" +
                             $"  当前 {currentGear.LabelShort}: {currentScore:+0.0;-0.0;0.0}\n" +
                             $"  差异: {(diff >= 0 ? "+" : "")}{diff:F0} ({(pct >= 0 ? "+" : "")}{pct:F1}%)");
@@ -118,7 +118,7 @@ namespace AutoEquipment
                 float diff = candidateScore - currentScore;
                 float pct = currentScore > 0 ? (diff / currentScore * 100f) : 0f;
 
-                Log.Message($"[AutoEquipment] {AEDebug.Label(pawn)} 防具评分对比:\n" +
+                Log.Message($"[AutoEverything] {AEDebug.Label(pawn)} 防具评分对比:\n" +
                             $"  候选 {candidate.LabelShort}: {candidateScore:+0.0;-0.0;0.0}\n" +
                             $"  当前 {currentGear.LabelShort}: {currentScore:+0.0;-0.0;0.0}\n" +
                             $"  差异: {(diff >= 0 ? "+" : "")}{diff:F0} ({(pct >= 0 ? "+" : "")}{pct:F1}%)");

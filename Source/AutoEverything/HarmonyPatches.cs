@@ -4,10 +4,10 @@ using HarmonyLib;
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
-    /// Auto Equipment MOD 的全部 Harmony 补丁集合。
+    /// Auto Everything MOD 的全部 Harmony 补丁集合。
     /// 补丁职责：
     /// 1) 游戏加载时为所有 Pawn 注入 CompGearManager 组件
     /// 2) 取消征召时恢复 Pawn 的主武器
@@ -16,7 +16,7 @@ namespace AutoEquipment
     public static class HarmonyPatches
     {
         // Harmony ID：整个 MOD 单一实例，发布后不可更改
-        public const string HarmonyID = "gookeryoung.autoequipment";
+        public const string HarmonyID = "gookeryoung.autoeverything";
 
         public static void Init()
         {
@@ -29,7 +29,7 @@ namespace AutoEquipment
             harmony.Patch(
                 AccessTools.Method(typeof(Pawn_DraftController), "set_Drafted"),
                 postfix: new HarmonyMethod(typeof(DraftController_SetDrafted_Patch), nameof(DraftController_SetDrafted_Patch.Postfix)));
-            Log.Message("[AutoEquipment] Harmony 补丁已应用 (显式注册 2 个 Postfix)");
+            Log.Message("[AutoEverything] Harmony 补丁已应用 (显式注册 2 个 Postfix)");
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace AutoEquipment
                 }
                 catch (Exception ex)
                 {
-                    Log.WarningOnce("[AutoEquipment] Pawn SpawnSetup 注入失败 " + (__instance?.LabelShort ?? "?") + ": " + ex.Message,
+                    Log.WarningOnce("[AutoEverything] Pawn SpawnSetup 注入失败 " + (__instance?.LabelShort ?? "?") + ": " + ex.Message,
                         (__instance?.thingIDNumber ?? 0) ^ 0x4153);
                 }
             }
@@ -126,7 +126,7 @@ namespace AutoEquipment
                     skipped++;
                 }
             }
-            Log.Message($"[AutoEquipment] ThingComp 注入完成: 新增={injected}, 已存在跳过={skipped}, 不适用类别跳过={skippedUnsuitable}");
+            Log.Message($"[AutoEverything] ThingComp 注入完成: 新增={injected}, 已存在跳过={skipped}, 不适用类别跳过={skippedUnsuitable}");
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace AutoEquipment
                     try { comp.OnUndraft(); }
                     catch (Exception ex)
                     {
-                        Log.Warning("[AutoEquipment] " + pawn.LabelShort + " 取消征召恢复失败: " + ex.Message);
+                        Log.Warning("[AutoEverything] " + pawn.LabelShort + " 取消征召恢复失败: " + ex.Message);
                     }
                 }
             }

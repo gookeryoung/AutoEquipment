@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace AutoEquipment.Scoring
+namespace AutoEverything.Scoring
 {
     /// <summary>
     /// 评分明细建造者：记录每个评分维度的加分项，最终汇总总分。
@@ -113,7 +113,7 @@ namespace AutoEquipment.Scoring
         public string BuildReport(string pawnLabel, string gearLabel)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"[AutoEquipment] {pawnLabel} 评分明细");
+            sb.AppendLine($"[AutoEverything] {pawnLabel} 评分明细");
             sb.AppendLine($"候选: {gearLabel}");
             sb.AppendLine(new string('─', 40));
 

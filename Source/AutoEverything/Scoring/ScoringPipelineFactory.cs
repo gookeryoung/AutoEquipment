@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
-using AutoEquipment.Scoring.Weapon;
-using AutoEquipment.Scoring.Apparels;
+using AutoEverything.Scoring.Weapon;
+using AutoEverything.Scoring.Apparels;
 
-namespace AutoEquipment.Scoring
+namespace AutoEverything.Scoring
 {
     /// <summary>
     /// 评分管线工厂：根据装备类型创建对应的评分管线。

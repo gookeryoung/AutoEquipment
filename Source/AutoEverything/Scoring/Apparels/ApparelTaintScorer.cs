@@ -1,7 +1,7 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
-namespace AutoEquipment.Scoring.Apparels
+namespace AutoEverything.Scoring.Apparels
 {
     /// <summary>
     /// 防具沾染评分：沾染尸体的防具大幅扣分。

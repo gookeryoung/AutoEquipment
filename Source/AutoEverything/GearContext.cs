@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using RimWorld;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     public enum GearContext
     {
@@ -138,7 +138,7 @@ namespace AutoEquipment
             {
                 if (prev != newContext)
                 {
-                    Log.Message($"[AutoEquipment] {pawn.LabelShort} 情境变化: {prev} -> {newContext}"
+                    Log.Message($"[AutoEverything] {pawn.LabelShort} 情境变化: {prev} -> {newContext}"
                         + (reason != null ? $" ({reason})" : ""));
                     lastLoggedContext[pawnId] = newContext;
                 }
@@ -147,7 +147,7 @@ namespace AutoEquipment
             {
                 // 首次见到该 Pawn：用 AEDebug.Log 避免游戏加载时刷屏
                 // 仅情境变化时才用 Log.Message 输出，减少玩家控制台噪音
-                AEDebug.Log(() => $"[AutoEquipment] {pawn.LabelShort} 初始情境: {newContext}"
+                AEDebug.Log(() => $"[AutoEverything] {pawn.LabelShort} 初始情境: {newContext}"
                     + (reason != null ? $" ({reason})" : ""));
                 lastLoggedContext[pawnId] = newContext;
             }

@@ -1,7 +1,7 @@
 using System;
 using Verse;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 装备 defName 启发式识别工具：统一判定武器/附件的类别归属。

@@ -3,7 +3,7 @@ using RimWorld;
 using Verse;
 using Verse.AI;
 
-namespace AutoEquipment
+namespace AutoEverything
 {
     /// <summary>
     /// 全局装备重配：真正的"全局"分配语义。
@@ -136,14 +136,14 @@ namespace AutoEquipment
                     if (dropped != null)
                     {
                         droppedCount++;
-                        Log.Message($"[AutoEquipment] 全局重配: {AEDebug.Label(pawn)} 放下武器 {dropped.LabelShort}");
+                        Log.Message($"[AutoEverything] 全局重配: {AEDebug.Label(pawn)} 放下武器 {dropped.LabelShort}");
                     }
                 }
-                Log.Message($"[AutoEquipment] 全局重配: 共 {droppedCount} 把武器已释放到地图候选池");
+                Log.Message($"[AutoEverything] 全局重配: 共 {droppedCount} 把武器已释放到地图候选池");
             }
             else
             {
-                Log.Message("[AutoEquipment] 全局重配: 已禁用'放下当前武器'，仅评估地图候选池");
+                Log.Message("[AutoEverything] 全局重配: 已禁用'放下当前武器'，仅评估地图候选池");
             }
 
             // ========== 收集地图候选武器 ==========
@@ -213,11 +213,11 @@ namespace AutoEquipment
                     var job = JobMaker.MakeJob(JobDefOf.Equip, bestWeapon);
                     pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
-                    Log.Message($"[AutoEquipment] 全局重配 #{i + 1}: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {bestWeapon.LabelShort} (score={bestScore:F1})");
+                    Log.Message($"[AutoEverything] 全局重配 #{i + 1}: {AEDebug.Label(pawn)} (战斗价值={SidearmAllocator.ComputeCombatValue(pawn):F1}) ← {bestWeapon.LabelShort} (score={bestScore:F1})");
                 }
                 else
                 {
-                    Log.Message($"[AutoEquipment] 全局重配 #{i + 1}: {AEDebug.Label(pawn)} 无可用武器");
+                    Log.Message($"[AutoEverything] 全局重配 #{i + 1}: {AEDebug.Label(pawn)} 无可用武器");
                 }
 
                 // 服装由后续 ReallocateApparel 处理
@@ -288,7 +288,7 @@ namespace AutoEquipment
                         }
                     }
                 }
-                Log.Message($"[AutoEquipment] 全局重配护甲: 共 {droppedApparelCount} 件护甲已释放到地图候选池");
+                Log.Message($"[AutoEverything] 全局重配护甲: 共 {droppedApparelCount} 件护甲已释放到地图候选池");
             }
 
             // ========== 收集地图候选护甲 ==========
@@ -399,11 +399,11 @@ namespace AutoEquipment
                     bestPawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
                     totalAssigned++;
-                    Log.Message($"[AutoEquipment] 全局重配护甲 #{totalAssigned}: {AEDebug.Label(bestPawn)} ← {ap.LabelShort} (score={bestScore:F1})");
+                    Log.Message($"[AutoEverything] 全局重配护甲 #{totalAssigned}: {AEDebug.Label(bestPawn)} ← {ap.LabelShort} (score={bestScore:F1})");
                 }
             }
 
-            Log.Message($"[AutoEquipment] 全局重配护甲完成: 共分配 {totalAssigned} 件护甲");
+            Log.Message($"[AutoEverything] 全局重配护甲完成: 共分配 {totalAssigned} 件护甲");
         }
 
         /// <summary>
