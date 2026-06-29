@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -23,13 +23,13 @@ namespace AutoEquipment.Scoring.Apparels
                         if (cold > 0f)
                         {
                             float score = cold * 50f;
-                            breakdown.AddScore(Name, $"寒冷+冷保温{cold:F1} × 50", score);
+                            breakdown.AddScore(Name, breakdown.CollectItems ? $"寒冷+冷保温{cold:F1} × 50" : null, score);
                         }
                         float armor = gear.def.GetStatValueAbstract(StatDefOf.ArmorRating_Sharp, stuff);
                         if (armor > 0f)
                         {
                             float score = armor * 20f;
-                            breakdown.AddScore(Name, $"寒冷+护甲{armor:F1} × 20", score);
+                            breakdown.AddScore(Name, breakdown.CollectItems ? $"寒冷+护甲{armor:F1} × 20" : null, score);
                         }
                         break;
                     }
@@ -40,14 +40,14 @@ namespace AutoEquipment.Scoring.Apparels
                         if (heat > 0f)
                         {
                             float score = heat * 50f;
-                            breakdown.AddScore(Name, $"炎热+热保温{heat:F1} × 50", score);
+                            breakdown.AddScore(Name, breakdown.CollectItems ? $"炎热+热保温{heat:F1} × 50" : null, score);
                         }
                         // 炎热情境惩罚重甲
                         float armor = gear.def.GetStatValueAbstract(StatDefOf.ArmorRating_Sharp, stuff);
                         if (armor > 0f)
                         {
                             float score = -armor * 30f;
-                            breakdown.AddScore(Name, $"炎热+重甲惩罚 -{armor:F1} × 30", score);
+                            breakdown.AddScore(Name, breakdown.CollectItems ? $"炎热+重甲惩罚 -{armor:F1} × 30" : null, score);
                         }
                         break;
                     }

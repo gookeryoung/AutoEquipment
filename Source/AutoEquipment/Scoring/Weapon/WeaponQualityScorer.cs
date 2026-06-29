@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Weapon
@@ -18,7 +18,7 @@ namespace AutoEquipment.Scoring.Weapon
             {
                 int qualityValue = (int)quality - 2; // Normal=0
                 float score = qualityValue * weights.w_quality;
-                breakdown.AddScore(Name, $"{quality}(等级{qualityValue})", score);
+                breakdown.AddScore(Name, breakdown.CollectItems ? $"{quality}(等级{qualityValue})" : null, score);
             }
         }
     }

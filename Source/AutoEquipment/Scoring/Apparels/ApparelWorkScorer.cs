@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -23,13 +23,13 @@ namespace AutoEquipment.Scoring.Apparels
                     if (medSurgery != 0f)
                     {
                         float score = medSurgery * 100f;
-                        breakdown.AddScore(Name, $"手术成功率{medSurgery:F2} × 100", score);
+                        breakdown.AddScore(Name, breakdown.CollectItems ? $"手术成功率{medSurgery:F2} × 100" : null, score);
                     }
                     float medTend = gear.GetStatValue(StatDefOf.MedicalTendQuality, true, -1);
                     if (medTend != 0f)
                     {
                         float score = medTend * 80f;
-                        breakdown.AddScore(Name, $"医疗质量{medTend:F2} × 80", score);
+                        breakdown.AddScore(Name, breakdown.CollectItems ? $"医疗质量{medTend:F2} × 80" : null, score);
                     }
                     break;
 
@@ -38,7 +38,7 @@ namespace AutoEquipment.Scoring.Apparels
                     if (workSpeed != 0f)
                     {
                         float score = workSpeed * weights.w_workspeed;
-                        breakdown.AddScore(Name, $"工作速度{workSpeed:F2} × {weights.w_workspeed:F0}", score);
+                        breakdown.AddScore(Name, breakdown.CollectItems ? $"工作速度{workSpeed:F2} × {weights.w_workspeed:F0}" : null, score);
                     }
                     break;
 
@@ -49,7 +49,7 @@ namespace AutoEquipment.Scoring.Apparels
                     if (armor > 0f)
                     {
                         float score = armor * 80f;
-                        breakdown.AddScore(Name, $"战斗角色+护甲{armor:F1} × 80", score);
+                        breakdown.AddScore(Name, breakdown.CollectItems ? $"战斗角色+护甲{armor:F1} × 80" : null, score);
                     }
                     break;
             }

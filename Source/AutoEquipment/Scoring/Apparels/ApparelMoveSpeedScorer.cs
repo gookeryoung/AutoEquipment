@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -18,7 +18,7 @@ namespace AutoEquipment.Scoring.Apparels
             if (offset != 0f)
             {
                 float score = offset * weights.w_movespeed;
-                breakdown.AddScore(Name, $"偏移{offset:F2} × {weights.w_movespeed:F0}", score);
+                breakdown.AddScore(Name, breakdown.CollectItems ? $"偏移{offset:F2} × {weights.w_movespeed:F0}" : null, score);
             }
         }
 

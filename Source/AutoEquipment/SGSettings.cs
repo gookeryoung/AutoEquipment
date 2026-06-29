@@ -245,41 +245,45 @@ namespace AutoEquipment
 
         public override void ExposeData()
         {
-            Scribe_Values.Look(ref enabled, "enabled", true);
-            Scribe_Values.Look(ref autoWeapons, "autoWeapons", true);
-            Scribe_Values.Look(ref autoApparel, "autoApparel", true);
-            Scribe_Values.Look(ref autoInventory, "autoInventory", true);
-            Scribe_Values.Look(ref sidearms, "sidearms", true);
-            Scribe_Values.Look(ref combatSwitch, "combatSwitch", true);
-            Scribe_Values.Look(ref huntingWeapon, "huntingWeapon", true);
-            Scribe_Values.Look(ref temperatureAware, "temperatureAware", true);
-            Scribe_Values.Look(ref jobAwareApparel, "jobAwareApparel", true);
-            Scribe_Values.Look(ref autoMeleeSidearm, "autoMeleeSidearm", true);
-            Scribe_Values.Look(ref carryMedicine, "carryMedicine", true);
-            Scribe_Values.Look(ref medicineCount, "medicineCount", 3);
-            Scribe_Values.Look(ref evaluateInterval, "evaluateInterval", 500);
-            Scribe_Values.Look(ref upgradeThreshold, "upgradeThreshold", 0.15f);
-            Scribe_Values.Look(ref tempDangerMargin, "tempDangerMargin", 5f);
-            Scribe_Values.Look(ref reallocateDropWeapons, "reallocateDropWeapons", true);
-            Scribe_Values.Look(ref reallocateRespectDrafted, "reallocateRespectDrafted", true);
-            Scribe_Values.Look(ref reallocateRespectLocked, "reallocateRespectLocked", true);
-            Scribe_Values.Look(ref reallocateRespectBiocoded, "reallocateRespectBiocoded", true);
-            Scribe_Values.Look(ref cvSkillWeight, "cvSkillWeight", 1.0f);
-            Scribe_Values.Look(ref cvPassionNoneMult, "cvPassionNoneMult", 1.0f);
-            Scribe_Values.Look(ref cvPassionMinorMult, "cvPassionMinorMult", 1.5f);
-            Scribe_Values.Look(ref cvPassionMajorMult, "cvPassionMajorMult", 2.0f);
-            Scribe_Values.Look(ref cvToughBonus, "cvToughBonus", 30f);
-            Scribe_Values.Look(ref cvTriggerHappyPenalty, "cvTriggerHappyPenalty", -15f);
-            Scribe_Values.Look(ref cvCarefulShooterBonus, "cvCarefulShooterBonus", 15f);
-            Scribe_Values.Look(ref reallocateApparel, "reallocateApparel", true);
-            Scribe_Values.Look(ref heavyArmorSharpThreshold, "heavyArmorSharpThreshold", 0.4f);
-            Scribe_Values.Look(ref heavyArmorPenaltyForLight, "heavyArmorPenaltyForLight", -1000f);
-            Scribe_Values.Look(ref lightArmorPenaltyForHeavy, "lightArmorPenaltyForHeavy", -1000f);
-            Scribe_Values.Look(ref debugLogging, "debugLogging", false);
+            // Scribe Key 统一加 ae_ 前缀，符合项目规范
+            // 兼容旧存档：加载时先读无前缀旧键，再读 ae_ 新键（若存在则覆盖）
+            // 保存时只写 ae_ 新键，旧存档升级后自动迁移
+            LookCompat(ref enabled, "enabled", true);
+            LookCompat(ref autoWeapons, "autoWeapons", true);
+            LookCompat(ref autoApparel, "autoApparel", true);
+            LookCompat(ref autoInventory, "autoInventory", true);
+            LookCompat(ref sidearms, "sidearms", true);
+            LookCompat(ref combatSwitch, "combatSwitch", true);
+            LookCompat(ref huntingWeapon, "huntingWeapon", true);
+            LookCompat(ref temperatureAware, "temperatureAware", true);
+            LookCompat(ref jobAwareApparel, "jobAwareApparel", true);
+            LookCompat(ref autoMeleeSidearm, "autoMeleeSidearm", true);
+            LookCompat(ref carryMedicine, "carryMedicine", true);
+            LookCompat(ref medicineCount, "medicineCount", 3);
+            LookCompat(ref evaluateInterval, "evaluateInterval", 500);
+            LookCompat(ref upgradeThreshold, "upgradeThreshold", 0.15f);
+            LookCompat(ref tempDangerMargin, "tempDangerMargin", 5f);
+            LookCompat(ref reallocateDropWeapons, "reallocateDropWeapons", true);
+            LookCompat(ref reallocateRespectDrafted, "reallocateRespectDrafted", true);
+            LookCompat(ref reallocateRespectLocked, "reallocateRespectLocked", true);
+            LookCompat(ref reallocateRespectBiocoded, "reallocateRespectBiocoded", true);
+            LookCompat(ref cvSkillWeight, "cvSkillWeight", 1.0f);
+            LookCompat(ref cvPassionNoneMult, "cvPassionNoneMult", 1.0f);
+            LookCompat(ref cvPassionMinorMult, "cvPassionMinorMult", 1.5f);
+            LookCompat(ref cvPassionMajorMult, "cvPassionMajorMult", 2.0f);
+            LookCompat(ref cvToughBonus, "cvToughBonus", 30f);
+            LookCompat(ref cvTriggerHappyPenalty, "cvTriggerHappyPenalty", -15f);
+            LookCompat(ref cvCarefulShooterBonus, "cvCarefulShooterBonus", 15f);
+            LookCompat(ref reallocateApparel, "reallocateApparel", true);
+            LookCompat(ref heavyArmorSharpThreshold, "heavyArmorSharpThreshold", 0.4f);
+            LookCompat(ref heavyArmorPenaltyForLight, "heavyArmorPenaltyForLight", -1000f);
+            LookCompat(ref lightArmorPenaltyForHeavy, "lightArmorPenaltyForHeavy", -1000f);
+            LookCompat(ref debugLogging, "debugLogging", false);
 
             // 自定义评级：以 List<string> 作为存档载体（"档次#名字" 格式）
             // 存档加载后需重建运行时字典
-            Scribe_Collections.Look(ref customTierEntries, "customTierEntries", LookMode.Value);
+            // 集合类型无法用 LookCompat 双读，直接用新键（旧存档会丢失自定义评级，需玩家重设）
+            Scribe_Collections.Look(ref customTierEntries, "ae_customTierEntries", LookMode.Value);
             if (customTierEntries == null) customTierEntries = new List<string>();
             RebuildCustomTierMap();
 
@@ -289,6 +293,32 @@ namespace AutoEquipment
             DebugMonitor.ExposeData();
 
             base.ExposeData();
+        }
+
+        /// <summary>
+        /// 兼容性 Scribe 读取：
+        /// - 加载模式：先读无前缀旧键（兼容旧存档），再读 ae_ 新键（若存在则覆盖）
+        /// - 保存模式：只写 ae_ 新键，实现自动迁移
+        /// </summary>
+        private static void LookCompat(ref bool value, string key, bool defaultValue)
+        {
+            if (Scribe.mode == LoadSaveMode.LoadingVars)
+                Scribe_Values.Look(ref value, key, defaultValue);
+            Scribe_Values.Look(ref value, "ae_" + key, value);
+        }
+
+        private static void LookCompat(ref float value, string key, float defaultValue)
+        {
+            if (Scribe.mode == LoadSaveMode.LoadingVars)
+                Scribe_Values.Look(ref value, key, defaultValue);
+            Scribe_Values.Look(ref value, "ae_" + key, value);
+        }
+
+        private static void LookCompat(ref int value, string key, int defaultValue)
+        {
+            if (Scribe.mode == LoadSaveMode.LoadingVars)
+                Scribe_Values.Look(ref value, key, defaultValue);
+            Scribe_Values.Look(ref value, "ae_" + key, value);
         }
 
         /// <summary>
@@ -501,7 +531,8 @@ namespace AutoEquipment
     /// </summary>
     public class PresetDetailsWindow : Window
     {
-        private Vector2 scrollPos = Vector2.zero;
+        // static 保持滚动位置：窗口关闭再打开时恢复上次位置，符合用户体验
+        private static Vector2 scrollPos = Vector2.zero;
 
         public override Vector2 InitialSize => new Vector2(420f, 480f);
 

@@ -21,11 +21,35 @@ namespace AutoEquipment.Scoring
 
         /// <summary>
         /// 执行评分管线，返回带明细的 ScoreBreakdown。
+        /// 性能路径调用方应使用 EvaluateFast（collectItems=false）避免 GC。
         /// </summary>
         public ScoreBreakdown Evaluate(Pawn pawn, TThing gear, Role role,
                                        GearContext context, GearWeights weights)
         {
-            var breakdown = new ScoreBreakdown();
+            return EvaluateCore(pawn, gear, role, context, weights, true);
+        }
+
+        /// <summary>
+        /// 性能路径入口：跳过 items 累积，仅计算 Total。
+        /// 用于 ScoreWeapon/ScoreApparel 非 WithBreakdown 版本，
+        /// 避免 Tick 路径中 N 件候选 × M 个 Scorer × 字符串插值分配。
+        /// </summary>
+        public ScoreBreakdown EvaluateFast(Pawn pawn, TThing gear, Role role,
+                                           GearContext context, GearWeights weights)
+        {
+            return EvaluateCore(pawn, gear, role, context, weights, false);
+        }
+
+        /// <summary>
+        /// 评分管线核心实现：按顺序执行所有 IScorer，累加分数到 ScoreBreakdown。
+        /// 否决（Veto）会短路后续 Scorer（除耐久修正外）。
+        /// </summary>
+        /// <param name="collectItems">true=收集明细项（调试路径）；false=仅累加 Total（性能路径）</param>
+        private ScoreBreakdown EvaluateCore(Pawn pawn, TThing gear, Role role,
+                                            GearContext context, GearWeights weights,
+                                            bool collectItems)
+        {
+            var breakdown = new ScoreBreakdown(collectItems);
 
             // 按顺序执行所有 Scorer
             for (int i = 0; i < scorers.Count; i++)

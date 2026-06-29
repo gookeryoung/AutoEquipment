@@ -26,6 +26,51 @@ namespace AutoEquipment
         // 需持续暴露于极端温度一定时间后才触发 Cold/Hot 情境（2500 tick ≈ 42 秒）
         private const int TempSustainTicks = 2500;
 
+        // 字典清理周期：与 RoleDetector 保持一致，60000 tick 扫描一次
+        // 移除已死亡/消失的 Pawn 条目，避免内存泄漏与 ID 复用导致的误判
+        private const int CleanupInterval = 60000;
+        private static int nextCleanupTick = 60000;
+        private static readonly HashSet<int> alivePawnIds = new HashSet<int>();
+        private static readonly List<int> keysToRemove = new List<int>();
+
+        /// <summary>
+        /// 清理已死亡/离开地图的 Pawn 在字典中的残留条目。
+        /// 由 CompGearManager 的 Tick 路径定期调用。
+        /// </summary>
+        public static void CleanupDeadPawns()
+        {
+            int tick = Find.TickManager.TicksGame;
+            if (tick < nextCleanupTick) return;
+            nextCleanupTick = tick + CleanupInterval;
+
+            alivePawnIds.Clear();
+            foreach (Map map in Find.Maps)
+            {
+                foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
+                {
+                    alivePawnIds.Add(pawn.thingIDNumber);
+                }
+            }
+
+            RemoveDeadKeys(coldSinceTick);
+            RemoveDeadKeys(hotSinceTick);
+            RemoveDeadKeys(lastLoggedContext);
+        }
+
+        private static void RemoveDeadKeys<TValue>(Dictionary<int, TValue> dict)
+        {
+            keysToRemove.Clear();
+            foreach (var kvp in dict)
+            {
+                if (!alivePawnIds.Contains(kvp.Key))
+                    keysToRemove.Add(kvp.Key);
+            }
+            for (int i = 0; i < keysToRemove.Count; i++)
+            {
+                dict.Remove(keysToRemove[i]);
+            }
+        }
+
         /// <summary>
         /// 判定 Pawn 当前的装备情境。
         /// </summary>

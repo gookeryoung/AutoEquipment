@@ -86,6 +86,10 @@
   <AE_Monitor_ApparelScore>防具评分</AE_Monitor_ApparelScore>
   <AE_Monitor_Breakdown>评分明细</AE_Monitor_Breakdown>
   <AE_Monitor_Comparison>评分对比</AE_Monitor_Comparison>
+  <AE_Slot_Weapon>武器</AE_Slot_Weapon>
+  <AE_Slot_Apparel>防具</AE_Slot_Apparel>
+  <AE_Swap_Removed>换下</AE_Swap_Removed>
+  <AE_Swap_Equipped>换上</AE_Swap_Equipped>
 
   <!-- 全局装备重配 -->
   <AE_GlobalReallocate>全局装备重配</AE_GlobalReallocate>
@@ -122,9 +126,9 @@
   <AE_ReallocRules_ArmorPrefSection>护甲偏好规则</AE_ReallocRules_ArmorPrefSection>
   <AE_ReallocRules_ArmorPref_Desc>前排战士优先重甲；后排有重甲盈余时考虑重甲；工人/猎人/医疗使用轻甲以提高工作效率</AE_ReallocRules_ArmorPref_Desc>
   <AE_ReallocRules_CurrentArmorPref>当前角色护甲偏好</AE_ReallocRules_CurrentArmorPref>
-  <AE_ArmorPref_Heavy>重甲（前排）</AE_ArmorPref_Heavy>
-  <AE_ArmorPref_Flexible>自由（后排）</AE_ArmorPref_Flexible>
-  <AE_ArmorPref_Light>轻甲（工人）</AE_ArmorPref_Light>
+  <AE_ArmorPref_Heavy>重甲[前排]</AE_ArmorPref_Heavy>
+  <AE_ArmorPref_Flexible>自由[后排]</AE_ArmorPref_Flexible>
+  <AE_ArmorPref_Light>轻甲[工人]</AE_ArmorPref_Light>
   <AE_ReallocRules_ReallocApparel>同时重配护甲</AE_ReallocRules_ReallocApparel>
   <AE_ReallocRules_HeavyThreshold>重甲判定阈值（ArmorRating_Sharp ≥）</AE_ReallocRules_HeavyThreshold>
   <AE_ReallocRules_HeavyPenaltyForLight>Heavy 偏好角色对轻甲减分</AE_ReallocRules_HeavyPenaltyForLight>
@@ -159,4 +163,7 @@
   <AE_Badge_Status>状态</AE_Badge_Status>
   <AE_Badge_Locked>已锁定</AE_Badge_Locked>
   <AE_Badge_Unlocked>未锁定</AE_Badge_Unlocked>
+  <AE_Badge_Ghoul>食尸鬼</AE_Badge_Ghoul>
+  <AE_Badge_NoAutoEquip>不参与自动装备</AE_Badge_NoAutoEquip>
+  <AE_GhoulHint>食尸鬼无法使用装备，仅展示评级供玩家参考。点击下方"全局装备重配"按钮不会分配装备给食尸鬼。</AE_GhoulHint>
 </LanguageData>

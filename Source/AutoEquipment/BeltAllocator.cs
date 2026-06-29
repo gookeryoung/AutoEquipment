@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -75,11 +76,13 @@ namespace AutoEquipment
                 // 首个高价值 Pawn 强制拿消防背包（若全局无人穿戴）
                 if (forceFirefoam && !firefoamAssigned)
                 {
-                    Thing firefoam = FindFirstFirefoamPack();
-                    if (firefoam != null)
+                    int firefoamIdx = FindFirstFirefoamPackIndex();
+                    if (firefoamIdx >= 0)
                     {
+                        Thing firefoam = candidateBelts[firefoamIdx];
                         AssignBelt(pawn, firefoam, "全局保底消防背包");
-                        candidateBelts.Remove(firefoam);
+                        // null 占位避免 Remove 的 O(n) 列表重排
+                        candidateBelts[firefoamIdx] = null;
                         firefoamAssigned = true;
                         continue;
                     }
@@ -88,6 +91,7 @@ namespace AutoEquipment
                 // 其余 Pawn 在护盾与消防背包中按评分选择
                 Thing best = null;
                 float bestScore = 0f;
+                int bestIdx = -1;
 
                 for (int j = 0; j < candidateBelts.Count; j++)
                 {
@@ -99,13 +103,15 @@ namespace AutoEquipment
                     {
                         bestScore = score;
                         best = b;
+                        bestIdx = j;
                     }
                 }
 
                 if (best != null)
                 {
                     AssignBelt(pawn, best, bestScore.ToString("F1"));
-                    candidateBelts.Remove(best);
+                    // null 占位避免 Remove 的 O(n) 列表重排
+                    candidateBelts[bestIdx] = null;
                 }
             }
         }
@@ -208,20 +214,22 @@ namespace AutoEquipment
 
         /// <summary>
         /// 护盾腰带判定：通过 defName 启发式识别。
+        /// 用 IndexOf(OrdinalIgnoreCase) 避免每帧 ToUpperInvariant 分配大写字符串。
         /// </summary>
         private static bool IsShieldBelt(Thing thing)
         {
             return thing?.def != null
-                && thing.def.defName.ToUpperInvariant().Contains("SHIELD");
+                && thing.def.defName.IndexOf("SHIELD", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>
         /// 消防背包判定：通过 defName 启发式识别。
+        /// 用 IndexOf(OrdinalIgnoreCase) 避免每帧 ToUpperInvariant 分配大写字符串。
         /// </summary>
         private static bool IsFirefoamPack(Thing thing)
         {
             return thing?.def != null
-                && thing.def.defName.ToUpperInvariant().Contains("FIREFOAM");
+                && thing.def.defName.IndexOf("FIREFOAM", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>
@@ -252,13 +260,14 @@ namespace AutoEquipment
             return false;
         }
 
-        private static Thing FindFirstFirefoamPack()
+        private static int FindFirstFirefoamPackIndex()
         {
             for (int i = 0; i < candidateBelts.Count; i++)
             {
-                if (IsFirefoamPack(candidateBelts[i])) return candidateBelts[i];
+                Thing b = candidateBelts[i];
+                if (b != null && IsFirefoamPack(b)) return i;
             }
-            return null;
+            return -1;
         }
 
         private static int ComparePawnByCombatValueDesc(Pawn a, Pawn b)

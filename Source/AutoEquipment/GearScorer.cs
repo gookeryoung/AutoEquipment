@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 using AutoEquipment.Scoring;
 
@@ -16,6 +16,7 @@ namespace AutoEquipment
         /// <summary>
         /// 为 Pawn 评分武器适配度，分数越高越适合。
         /// 重构后：委托给武器评分管线，由各 IScorer 独立评分。
+        /// 性能优化：使用 EvaluateFast 跳过 items 累积，避免 Tick 路径 GC 压力。
         /// </summary>
         public static float ScoreWeapon(Pawn pawn, Thing weapon, Role role, GearContext context)
         {
@@ -23,17 +24,23 @@ namespace AutoEquipment
 
             GearWeights weights = GearPolicyEngine.GetWeights(role, context);
             var pipeline = ScoringPipelineFactory.GetWeaponPipeline();
-            var breakdown = pipeline.Evaluate(pawn, weapon, role, context, weights);
+            // 性能路径：跳过 items 累积
+            var breakdown = pipeline.EvaluateFast(pawn, weapon, role, context, weights);
 
             float score = breakdown.Vetoed ? breakdown.VetoScore : breakdown.Total;
 
             // 可疑评分：真实武器却得 0 或负分时记录（WarningOnce 防刷屏，详细报告走调试开关）
+            // 仅在可疑评分且开启调试时才重新走 WithBreakdown 取明细
             if (score <= 0f && (weapon.def.IsRangedWeapon || weapon.def.IsMeleeWeapon))
             {
                 Log.WarningOnce($"[AutoEquipment] ScoreWeapon 可疑评分 {score:F1}: {pawn.LabelShort} + '{weapon.def.defName}' (role={role}, context={context})",
                     pawn.thingIDNumber ^ weapon.thingIDNumber);
                 if (AEDebug.IsActive)
-                    AEDebug.Log(breakdown.BuildReport(pawn.LabelShort, weapon.LabelShort));
+                {
+                    // 重新评分取明细（仅可疑时，频率低）
+                    var detailedBreakdown = ScoreWeaponWithBreakdown(pawn, weapon, role, context);
+                    AEDebug.Log(() => detailedBreakdown.BuildReport(pawn.LabelShort, weapon.LabelShort));
+                }
             }
 
             return score;
@@ -57,6 +64,7 @@ namespace AutoEquipment
         /// <summary>
         /// 为 Pawn 评分防具适配度，分数越高越适合。
         /// 重构后：委托给防具评分管线。
+        /// 性能优化：使用 EvaluateFast 跳过 items 累积，避免 Tick 路径 GC 压力。
         /// </summary>
         public static float ScoreApparel(Pawn pawn, Apparel apparel, Role role, GearContext context)
         {
@@ -64,7 +72,8 @@ namespace AutoEquipment
 
             GearWeights weights = GearPolicyEngine.GetWeights(role, context);
             var pipeline = ScoringPipelineFactory.GetApparelPipeline();
-            var breakdown = pipeline.Evaluate(pawn, apparel, role, context, weights);
+            // 性能路径：跳过 items 累积
+            var breakdown = pipeline.EvaluateFast(pawn, apparel, role, context, weights);
 
             float score = breakdown.Vetoed ? breakdown.VetoScore : breakdown.Total;
 
@@ -74,7 +83,11 @@ namespace AutoEquipment
                 Log.WarningOnce($"[AutoEquipment] ScoreApparel 可疑评分 {score:F1}: {pawn.LabelShort} + '{apparel.def.defName}' (role={role}, context={context})",
                     pawn.thingIDNumber ^ apparel.thingIDNumber);
                 if (AEDebug.IsActive)
-                    AEDebug.Log(breakdown.BuildReport(pawn.LabelShort, apparel.LabelShort));
+                {
+                    // 重新评分取明细（仅可疑时，频率低）
+                    var detailedBreakdown = ScoreApparelWithBreakdown(pawn, apparel, role, context);
+                    AEDebug.Log(() => detailedBreakdown.BuildReport(pawn.LabelShort, apparel.LabelShort));
+                }
             }
 
             return score;

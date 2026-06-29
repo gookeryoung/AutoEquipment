@@ -27,7 +27,7 @@ namespace AutoEquipment.Scoring.Weapon
                 {
                     float passionMult = GetPassionMultiplier(shooting, weights);
                     float score = shooting.Level * weights.w_skill * passionMult;
-                    string desc = $"射击{shooting.Level} × {weights.w_skill:F1} × {passionMult:F1}({GetPassionName(shooting.passion)})";
+                    string desc = breakdown.CollectItems ? $"射击{shooting.Level} × {weights.w_skill:F1} × {passionMult:F1}({GetPassionName(shooting.passion)})" : null;
                     breakdown.AddScore(Name, desc, score);
                 }
 
@@ -47,7 +47,7 @@ namespace AutoEquipment.Scoring.Weapon
                 {
                     float passionMult = GetPassionMultiplier(melee, weights);
                     float score = melee.Level * weights.w_skill * passionMult;
-                    string desc = $"近战{melee.Level} × {weights.w_skill:F1} × {passionMult:F1}({GetPassionName(melee.passion)})";
+                    string desc = breakdown.CollectItems ? $"近战{melee.Level} × {weights.w_skill:F1} × {passionMult:F1}({GetPassionName(melee.passion)})" : null;
                     breakdown.AddScore(Name, desc, score);
                 }
             }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
@@ -570,7 +571,7 @@ namespace AutoEquipment
             {
                 if (worn[i].def.apparel?.layers != null
                     && worn[i].def.apparel.layers.Contains(ApparelLayerDefOf.Belt)
-                    && worn[i].def.defName.ToUpperInvariant().Contains("SHIELD"))
+                    && worn[i].def.defName.IndexOf("SHIELD", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     return true;
                 }
@@ -655,12 +656,13 @@ namespace AutoEquipment
         /// <summary>
         /// EMP 武器判定：通过 defName/label 启发式识别。
         /// 覆盖原生 EMP 手榴弹、EMP 炮及 MOD 扩展的 EMP 武器。
+        /// 用 IndexOf(OrdinalIgnoreCase) 避免每次 ToUpperInvariant 分配字符串。
         /// </summary>
         private static bool IsEmpWeapon(Thing weapon)
         {
             if (weapon?.def == null) return false;
-            return weapon.def.defName.ToUpperInvariant().Contains("EMP")
-                || weapon.def.label.ToUpperInvariant().Contains("EMP");
+            return weapon.def.defName.IndexOf("EMP", StringComparison.OrdinalIgnoreCase) >= 0
+                || weapon.def.label.IndexOf("EMP", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static void AssignSidearm(Pawn pawn, Thing weapon, float score)

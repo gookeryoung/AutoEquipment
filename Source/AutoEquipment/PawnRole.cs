@@ -38,6 +38,50 @@ namespace AutoEquipment
         // 记录每个 Pawn 上一次检测到的角色，仅在变化时输出日志以减少噪音
         private static readonly Dictionary<int, Role> lastLoggedRole = new Dictionary<int, Role>();
 
+        // 字典清理周期：60000 tick（约 1 游戏小时）扫描一次，移除已死亡/消失的 Pawn 条目
+        // 避免字典无限增长导致内存泄漏与 thingIDNumber 复用导致的误判
+        private const int CleanupInterval = 60000;
+        private static int nextCleanupTick = 60000;
+        // 复用静态集合避免每次清理分配（非 Tick 热路径，但保持习惯）
+        private static readonly HashSet<int> alivePawnIds = new HashSet<int>();
+        private static readonly List<int> keysToRemove = new List<int>();
+
+        /// <summary>
+        /// 清理已死亡/离开地图的 Pawn 在字典中的残留条目。
+        /// 由 CompGearManager 的 Tick 路径定期调用。
+        /// </summary>
+        public static void CleanupDeadPawns()
+        {
+            int tick = Find.TickManager.TicksGame;
+            if (tick < nextCleanupTick) return;
+            nextCleanupTick = tick + CleanupInterval;
+
+            alivePawnIds.Clear();
+            foreach (Map map in Find.Maps)
+            {
+                foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
+                {
+                    alivePawnIds.Add(pawn.thingIDNumber);
+                }
+            }
+
+            RemoveDeadKeys(lastLoggedRole);
+        }
+
+        private static void RemoveDeadKeys<TValue>(Dictionary<int, TValue> dict)
+        {
+            keysToRemove.Clear();
+            foreach (var kvp in dict)
+            {
+                if (!alivePawnIds.Contains(kvp.Key))
+                    keysToRemove.Add(kvp.Key);
+            }
+            for (int i = 0; i < keysToRemove.Count; i++)
+            {
+                dict.Remove(keysToRemove[i]);
+            }
+        }
+
         /// <summary>
         /// 基于技能、特质与工作指派检测 Pawn 最合适的角色。
         /// </summary>
@@ -55,89 +99,92 @@ namespace AutoEquipment
                 result = Role.Pacifist;
                 reason = "无法暴力";
             }
-            // 意识形态角色（如祭司、领袖）：仅作标签，不直接驱动评分
-            // 由 GearPolicyEngine 调度时保留其原有装备偏好
-            else if (pawn.Ideo != null && pawn.Ideo.GetRole(pawn) != null)
-            {
-                var ideoRole = pawn.Ideo.GetRole(pawn);
-                // 意识形态角色按其原有技能倾向二次分类
-                int shooting = pawn.skills.GetSkill(SkillDefOf.Shooting)?.Level ?? 0;
-                int melee = pawn.skills.GetSkill(SkillDefOf.Melee)?.Level ?? 0;
-                int medicine = pawn.skills.GetSkill(SkillDefOf.Medicine)?.Level ?? 0;
-
-                if (medicine >= 8 && medicine >= shooting && medicine >= melee)
-                {
-                    result = Role.Doctor;
-                    reason = $"意识形态角色({ideoRole.def.label})+医疗={medicine}";
-                }
-                else if (shooting >= 8 && shooting > melee)
-                {
-                    result = Role.Shooter;
-                    reason = $"意识形态角色({ideoRole.def.label})+射击={shooting}";
-                }
-                else if (melee >= 8 && melee > shooting)
-                {
-                    result = Role.Brawler;
-                    reason = $"意识形态角色({ideoRole.def.label})+近战={melee}";
-                }
-                else
-                {
-                    result = Role.Leader;
-                    reason = $"意识形态角色={ideoRole.def.label}";
-                }
-            }
-            // 格斗者特质：直接判定为格斗者角色
-            else if (pawn.story.traits?.HasTrait(TraitDefOf.Brawler) == true)
-            {
-                result = Role.Brawler;
-                reason = "格斗者特质";
-            }
-            // 猎人：狩猎工作优先级为 1
-            else if (pawn.workSettings != null && pawn.workSettings.EverWork
-                && pawn.workSettings.GetPriority(WorkTypeDefOf.Hunting) == 1)
-            {
-                result = Role.Hunter;
-                reason = "狩猎优先级 1";
-            }
             else
             {
-                int shooting = pawn.skills.GetSkill(SkillDefOf.Shooting)?.Level ?? 0;
-                int melee = pawn.skills.GetSkill(SkillDefOf.Melee)?.Level ?? 0;
-                int medicine = pawn.skills.GetSkill(SkillDefOf.Medicine)?.Level ?? 0;
+                // 意识形态角色（如祭司、领袖）：仅作标签，不直接驱动评分
+                // 优化：原代码在条件判断与分支体中两次调用 Ideo.GetRole(pawn)，合并为单次查询
+                var ideoRole = pawn.Ideo?.GetRole(pawn);
+                if (ideoRole != null)
+                {
+                    // 意识形态角色按其原有技能倾向二次分类
+                    int shooting = pawn.skills.GetSkill(SkillDefOf.Shooting)?.Level ?? 0;
+                    int melee = pawn.skills.GetSkill(SkillDefOf.Melee)?.Level ?? 0;
+                    int medicine = pawn.skills.GetSkill(SkillDefOf.Medicine)?.Level ?? 0;
 
-                // 医生：医疗是其最佳战斗相关技能且 >= 8
-                if (medicine >= 8 && medicine >= shooting && medicine >= melee)
-                {
-                    result = Role.Doctor;
-                    reason = $"医疗={medicine} >= 射击={shooting}, 近战={melee}";
+                    if (medicine >= 8 && medicine >= shooting && medicine >= melee)
+                    {
+                        result = Role.Doctor;
+                        reason = $"意识形态角色({ideoRole.def.label})+医疗={medicine}";
+                    }
+                    else if (shooting >= 8 && shooting > melee)
+                    {
+                        result = Role.Shooter;
+                        reason = $"意识形态角色({ideoRole.def.label})+射击={shooting}";
+                    }
+                    else if (melee >= 8 && melee > shooting)
+                    {
+                        result = Role.Brawler;
+                        reason = $"意识形态角色({ideoRole.def.label})+近战={melee}";
+                    }
+                    else
+                    {
+                        result = Role.Leader;
+                        reason = $"意识形态角色={ideoRole.def.label}";
+                    }
                 }
-                // 射手 vs 格斗者：谁的技能更高
-                else if (shooting >= 8 && shooting > melee)
-                {
-                    result = Role.Shooter;
-                    reason = $"射击={shooting} > 近战={melee}";
-                }
-                else if (melee >= 8 && melee > shooting)
+                // 格斗者特质：直接判定为格斗者角色
+                else if (pawn.story.traits?.HasTrait(TraitDefOf.Brawler) == true)
                 {
                     result = Role.Brawler;
-                    reason = $"近战={melee} > 射击={shooting}";
+                    reason = "格斗者特质";
                 }
-                // 两项战斗技能都低：判断是否主要为工人
-                else if (shooting < 5 && melee < 5)
+                // 猎人：狩猎工作优先级为 1
+                else if (pawn.workSettings != null && pawn.workSettings.EverWork
+                    && pawn.workSettings.GetPriority(WorkTypeDefOf.Hunting) == 1)
                 {
-                    result = Role.Worker;
-                    reason = $"战斗技能偏低 (射击={shooting}, 近战={melee})";
-                }
-                // 中等战斗技能：默认为射手（远程通常更安全）
-                else if (shooting >= melee)
-                {
-                    result = Role.Shooter;
-                    reason = $"射击={shooting} >= 近战={melee} (中等)";
+                    result = Role.Hunter;
+                    reason = "狩猎优先级 1";
                 }
                 else
                 {
-                    result = Role.Brawler;
-                    reason = $"近战={melee} > 射击={shooting} (中等)";
+                    int shooting = pawn.skills.GetSkill(SkillDefOf.Shooting)?.Level ?? 0;
+                    int melee = pawn.skills.GetSkill(SkillDefOf.Melee)?.Level ?? 0;
+                    int medicine = pawn.skills.GetSkill(SkillDefOf.Medicine)?.Level ?? 0;
+
+                    // 医生：医疗是其最佳战斗相关技能且 >= 8
+                    if (medicine >= 8 && medicine >= shooting && medicine >= melee)
+                    {
+                        result = Role.Doctor;
+                        reason = $"医疗={medicine} >= 射击={shooting}, 近战={melee}";
+                    }
+                    // 射手 vs 格斗者：谁的技能更高
+                    else if (shooting >= 8 && shooting > melee)
+                    {
+                        result = Role.Shooter;
+                        reason = $"射击={shooting} > 近战={melee}";
+                    }
+                    else if (melee >= 8 && melee > shooting)
+                    {
+                        result = Role.Brawler;
+                        reason = $"近战={melee} > 射击={shooting}";
+                    }
+                    // 两项战斗技能都低：判断是否主要为工人
+                    else if (shooting < 5 && melee < 5)
+                    {
+                        result = Role.Worker;
+                        reason = $"战斗技能偏低 (射击={shooting}, 近战={melee})";
+                    }
+                    // 中等战斗技能：默认为射手（远程通常更安全）
+                    else if (shooting >= melee)
+                    {
+                        result = Role.Shooter;
+                        reason = $"射击={shooting} >= 近战={melee} (中等)";
+                    }
+                    else
+                    {
+                        result = Role.Brawler;
+                        reason = $"近战={melee} > 射击={shooting} (中等)";
+                    }
                 }
             }
 

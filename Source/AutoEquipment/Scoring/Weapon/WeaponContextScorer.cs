@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Weapon
@@ -27,7 +27,7 @@ namespace AutoEquipment.Scoring.Weapon
                         if (range > 0f)
                         {
                             float rangeScore = range * 1.5f;
-                            breakdown.AddScore(Name, $"狩猎+射程{range:F0}×1.5", rangeScore);
+                            breakdown.AddScore(Name, breakdown.CollectItems ? $"狩猎+射程{range:F0}×1.5" : null, rangeScore);
                         }
                     }
                     else if (isMelee)

@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -19,7 +19,7 @@ namespace AutoEquipment.Scoring.Apparels
             float blunt = gear.def.GetStatValueAbstract(StatDefOf.ArmorRating_Blunt, stuff);
             float armor = sharp + blunt * 0.5f;
             float score = armor * weights.w_armor;
-            breakdown.AddScore(Name, $"锐{sharp:F1}+钝{blunt:F1}×0.5 × {weights.w_armor:F0}", score);
+            breakdown.AddScore(Name, breakdown.CollectItems ? $"锐{sharp:F1}+钝{blunt:F1}×0.5 × {weights.w_armor:F0}" : null, score);
         }
     }
 }

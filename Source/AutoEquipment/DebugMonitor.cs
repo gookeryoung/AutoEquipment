@@ -49,13 +49,15 @@ namespace AutoEquipment
             if (!monitorEnabled || !monitorSwapEvents) return;
             if (pawn == null || newGear == null) return;
 
-            string oldLabel = oldGear?.LabelShort ?? "无";
+            // 翻译化：原硬编码"无"/"换下"/"换上"改为 Keyed 翻译，支持英文环境
+            string oldLabel = oldGear?.LabelShort ?? "AE_None".Translate();
             string newLabel = newGear.LabelShort;
             float improvement = newScore - oldScore;
             float improvementPct = oldScore > 0 ? (improvement / oldScore * 100f) : 0f;
 
             string msg = "[AE] " + AEDebug.Label(pawn) + " " + slot +
-                         " 换下:" + oldLabel + " → 换上:" + newLabel +
+                         " " + "AE_Swap_Removed".Translate() + ":" + oldLabel +
+                         " → " + "AE_Swap_Equipped".Translate() + ":" + newLabel +
                          " (" + newScore.ToString("F0") + " vs " + oldScore.ToString("F0") +
                          ", " + (improvement >= 0 ? "+" : "") + improvement.ToString("F0") +
                          " = " + (improvement >= 0 ? "+" : "") + improvementPct.ToString("F0") + "%)";

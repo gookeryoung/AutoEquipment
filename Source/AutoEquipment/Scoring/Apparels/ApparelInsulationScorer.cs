@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -18,7 +18,7 @@ namespace AutoEquipment.Scoring.Apparels
             float heat = gear.def.GetStatValueAbstract(StatDefOf.Insulation_Heat, stuff);
             float insulation = cold + heat;
             float score = insulation * weights.w_insulation;
-            breakdown.AddScore(Name, $"冷{cold:F1}+热{heat:F1} × {weights.w_insulation:F0}", score);
+            breakdown.AddScore(Name, breakdown.CollectItems ? $"冷{cold:F1}+热{heat:F1} × {weights.w_insulation:F0}" : null, score);
         }
     }
 }

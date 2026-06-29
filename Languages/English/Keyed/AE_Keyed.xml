@@ -86,6 +86,10 @@
   <AE_Monitor_ApparelScore>Apparel score</AE_Monitor_ApparelScore>
   <AE_Monitor_Breakdown>Score breakdown</AE_Monitor_Breakdown>
   <AE_Monitor_Comparison>Score comparison</AE_Monitor_Comparison>
+  <AE_Slot_Weapon>Weapon</AE_Slot_Weapon>
+  <AE_Slot_Apparel>Apparel</AE_Slot_Apparel>
+  <AE_Swap_Removed>Removed</AE_Swap_Removed>
+  <AE_Swap_Equipped>Equipped</AE_Swap_Equipped>
 
   <!-- Global gear reallocate -->
   <AE_GlobalReallocate>Global Gear Reallocate</AE_GlobalReallocate>
@@ -122,9 +126,9 @@
   <AE_ReallocRules_ArmorPrefSection>Armor Preference Rules</AE_ReallocRules_ArmorPrefSection>
   <AE_ReallocRules_ArmorPref_Desc>Front-line fighters prefer heavy armor; back-line uses heavy if surplus; workers/hunters/medics use light armor for efficiency</AE_ReallocRules_ArmorPref_Desc>
   <AE_ReallocRules_CurrentArmorPref>Current role armor preference</AE_ReallocRules_CurrentArmorPref>
-  <AE_ArmorPref_Heavy>Heavy (front)</AE_ArmorPref_Heavy>
-  <AE_ArmorPref_Flexible>Flexible (back)</AE_ArmorPref_Flexible>
-  <AE_ArmorPref_Light>Light (worker)</AE_ArmorPref_Light>
+  <AE_ArmorPref_Heavy>Heavy[front]</AE_ArmorPref_Heavy>
+  <AE_ArmorPref_Flexible>Flex[back]</AE_ArmorPref_Flexible>
+  <AE_ArmorPref_Light>Light[worker]</AE_ArmorPref_Light>
   <AE_ReallocRules_ReallocApparel>Also reallocate apparel</AE_ReallocRules_ReallocApparel>
   <AE_ReallocRules_HeavyThreshold>Heavy armor threshold (ArmorRating_Sharp >=)</AE_ReallocRules_HeavyThreshold>
   <AE_ReallocRules_HeavyPenaltyForLight>Heavy-pref role penalty on light armor</AE_ReallocRules_HeavyPenaltyForLight>
@@ -159,4 +163,7 @@
   <AE_Badge_Status>Status</AE_Badge_Status>
   <AE_Badge_Locked>Locked</AE_Badge_Locked>
   <AE_Badge_Unlocked>Unlocked</AE_Badge_Unlocked>
+  <AE_Badge_Ghoul>Ghoul</AE_Badge_Ghoul>
+  <AE_Badge_NoAutoEquip>No Auto-Equip</AE_Badge_NoAutoEquip>
+  <AE_GhoulHint>Ghouls cannot use gear. Tier shown for player reference only. "Global Gear Reallocate" will skip ghouls.</AE_GhoulHint>
 </LanguageData>

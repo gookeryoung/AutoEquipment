@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Weapon
@@ -20,7 +20,7 @@ namespace AutoEquipment.Scoring.Weapon
             if (range > 0f)
             {
                 float score = range * weights.w_range;
-                breakdown.AddScore(Name, $"{range:F0} × {weights.w_range:F1}", score);
+                breakdown.AddScore(Name, breakdown.CollectItems ? $"{range:F0} × {weights.w_range:F1}" : null, score);
             }
         }
     }

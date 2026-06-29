@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Weapon
@@ -21,21 +21,21 @@ namespace AutoEquipment.Scoring.Weapon
             {
                 float dps = gear.GetStatValue(StatDefOf.MeleeWeapon_AverageDPS);
                 float score = dps * weights.w_dps * contextMult;
-                breakdown.AddScore(Name, $"近战DPS{dps:F1} × {weights.w_dps:F1}" +
-                    (contextMult > 1f ? $" × {contextMult:F1}(战斗)" : ""), score);
+                breakdown.AddScore(Name, breakdown.CollectItems ? ($"近战DPS{dps:F1} × {weights.w_dps:F1}" +
+                    (contextMult > 1f ? $" × {contextMult:F1}(战斗)" : "")) : null, score);
             }
             else if (gear.def.IsRangedWeapon)
             {
                 float dmgMult = gear.GetStatValue(StatDefOf.RangedWeapon_DamageMultiplier);
                 float dmgScore = dmgMult * weights.w_dmg * contextMult;
-                breakdown.AddScore(Name, $"伤害倍率{dmgMult:F2} × {weights.w_dmg:F1}" +
-                    (contextMult > 1f ? $" × {contextMult:F1}(战斗)" : ""), dmgScore);
+                breakdown.AddScore(Name, breakdown.CollectItems ? ($"伤害倍率{dmgMult:F2} × {weights.w_dmg:F1}" +
+                    (contextMult > 1f ? $" × {contextMult:F1}(战斗)" : "")) : null, dmgScore);
 
                 float cooldown = gear.GetStatValue(StatDefOf.RangedWeapon_Cooldown);
                 if (cooldown > 0f)
                 {
                     float cdScore = (1f / cooldown) * weights.w_cooldown * contextMult;
-                    breakdown.AddScore(Name, $"射速1/{cooldown:F2} × {weights.w_cooldown:F1}", cdScore);
+                    breakdown.AddScore(Name, breakdown.CollectItems ? $"射速1/{cooldown:F2} × {weights.w_cooldown:F1}" : null, cdScore);
                 }
             }
         }

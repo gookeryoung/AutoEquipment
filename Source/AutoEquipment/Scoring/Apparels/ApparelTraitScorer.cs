@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -49,7 +49,7 @@ namespace AutoEquipment.Scoring.Apparels
                 if (beautyValue > 0f)
                 {
                     float score = beautyValue * 5f;
-                    breakdown.AddScore(Name, $"美感偏好+{beautyValue:F1}", score);
+                    breakdown.AddScore(Name, breakdown.CollectItems ? $"美感偏好+{beautyValue:F1}" : null, score);
                 }
             }
         }

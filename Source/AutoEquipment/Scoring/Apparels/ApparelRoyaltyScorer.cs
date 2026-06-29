@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -27,7 +27,7 @@ namespace AutoEquipment.Scoring.Apparels
                     var req = title.def.requiredApparel[j];
                     if (req.ApparelMeetsRequirement(gear.def, false))
                     {
-                        breakdown.AddScore(Name, $"{title.def.label}要求", 40f);
+                        breakdown.AddScore(Name, breakdown.CollectItems ? $"{title.def.label}要求" : null, 40f);
                         return; // 一个头衔满足即可，避免重复加分
                     }
                 }

@@ -9,16 +9,33 @@ namespace AutoEquipment
     /// Pawn 检视面板的自定义标签页：展示角色、情境、装备状态与自定义评级。
     /// 全局装备重配规则（战斗价值公式、护甲偏好等）移至 Dialog_GlobalReallocate 对话框，
     /// 点击"全局装备重配"按钮后弹出对话框，确认后才执行重配。
-    /// 食尸鬼不显示此面板。
     ///
     /// UI 设计：使用带颜色底色的徽章（Badge）区分类别——
     ///   角色：蓝/红/绿/橙/灰等按角色类型区分
     ///   情境：红=战斗、橙=狩猎、青=寒冷、橙红=炎热、蓝=工作、白=日常
     ///   评级：金=S、紫=A、蓝=B、绿=C、灰=D、红=X
-    ///   护甲偏好：暗红=重甲、黄=自由、绿=轻甲
+    ///   护甲偏好：暗红=重甲[前排]、黄=自由[后排]、绿=轻甲[工人]
+    ///
+    /// 食尸鬼处理：食尸鬼也显示此面板，展示评级/战斗价值等信息供玩家参考，
+    /// 但不参与自动装备分配。面板会显示"食尸鬼"徽章与"不参与自动装备"提示。
     /// </summary>
     public class ITab_GearManager : ITab
     {
+        // FillTab 缓存：避免每帧重算角色/情境/评级等
+        // 60 tick（约 1 秒）刷新一次；选中的 Pawn 变化时立即刷新
+        private const int CacheInterval = 60;
+        private static int cacheTick = -1;
+        private static int cachedPawnId = -1;
+        private static Role cachedRole;
+        private static GearContext cachedContext;
+        private static CombatTier cachedTier;
+        private static ArmorPreference cachedArmorPref;
+        private static float cachedCombatValue;
+        private static float cachedPawnValue;
+
+        // ScrollView 滚动位置：static 保持位置，切换 Pawn 时不重置
+        private static Vector2 scrollPos = Vector2.zero;
+
         public ITab_GearManager()
         {
             labelKey = "AE_Tab";
@@ -31,11 +48,11 @@ namespace AutoEquipment
             get
             {
                 // 通过 BasePawn 注入 ITab 时，动物/机械族等也会创建实例
-                // 此处过滤：仅玩家阵营人类like 且非食尸鬼才显示
+                // 此处过滤：仅玩家阵营人类like 才显示
+                // 食尸鬼也允许显示（仅展示评级，不参与装备分配）
                 return SelPawn is Pawn pawn
                     && pawn.Faction == Faction.OfPlayer
-                    && PawnSuitabilityChecker.CanManageGear(pawn)
-                    && !DLCCompat.IsGhoul(pawn);
+                    && PawnSuitabilityChecker.CanManageGear(pawn);
             }
         }
 
@@ -44,7 +61,8 @@ namespace AutoEquipment
             if (!(SelPawn is Pawn pawn)) return;
 
             var comp = pawn.GetComp<CompGearManager>();
-            if (comp == null) return;
+            // 食尸鬼可能没有 comp（被排除注入），仍允许显示评级信息
+            bool isGhoul = DLCCompat.IsGhoul(pawn);
 
             // 底部按钮区预留高度：两按钮 + 间隔
             float buttonHeight = 30f;
@@ -55,8 +73,39 @@ namespace AutoEquipment
             // 内容区高度 = 总高 - 两按钮区
             Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (buttonHeight * 2 + buttonGap * 2));
 
+            // ===================== 缓存计算展示数据 =====================
+            // FillTab 每帧调用，角色/情境/评级计算涉及技能与特质查询，缓存 60 tick 避免重复计算
+            int tick = Find.TickManager.TicksGame;
+            int pawnId = pawn.thingIDNumber;
+            if (tick - cacheTick >= CacheInterval || pawnId != cachedPawnId)
+            {
+                cacheTick = tick;
+                cachedPawnId = pawnId;
+                // 食尸鬼也可能有 SidearmAllocator.GetCombatTier/ComputeCombatValue，
+                // 用于玩家参考其价值（即使不参与分配）
+                cachedRole = comp != null ? comp.CurrentRole : RoleDetector.DetectRole(pawn);
+                cachedContext = ContextDetector.GetContext(pawn);
+                cachedTier = SidearmAllocator.GetCombatTier(pawn);
+                cachedArmorPref = RoleDetector.GetArmorPreference(cachedRole);
+                cachedCombatValue = SidearmAllocator.ComputeCombatValue(pawn);
+                cachedPawnValue = SidearmAllocator.ComputePawnValueScore(pawn);
+            }
+
+            Role role = cachedRole;
+            GearContext context = cachedContext;
+            CombatTier tier = cachedTier;
+            ArmorPreference armorPref = cachedArmorPref;
+            float combatValue = cachedCombatValue;
+            float pawnValue = cachedPawnValue;
+
+            // ===================== ScrollView 包裹内容区 =====================
+            // 内部 inner rect 从 (0,0) 开始，宽度比 outer 少 16f 预留滚动条
+            float contentHeight = 520f;  // 预估高度并留余量
+            Rect innerRect = new Rect(0f, 0f, contentRect.width - 16f, contentHeight);
+            Widgets.BeginScrollView(contentRect, ref scrollPos, innerRect);
+
             Listing_Standard l = new Listing_Standard();
-            l.Begin(contentRect);
+            l.Begin(innerRect);
 
             // ===================== 顶部标题 =====================
             Text.Font = GameFont.Medium;
@@ -65,19 +114,24 @@ namespace AutoEquipment
             l.Gap(4f);
 
             // ===================== 徽章区：角色 / 情境 / 评级 / 护甲偏好 =====================
-            Role role = comp.CurrentRole;
-            GearContext context = ContextDetector.GetContext(pawn);
-            CombatTier tier = SidearmAllocator.GetCombatTier(pawn);
-            ArmorPreference armorPref = RoleDetector.GetArmorPreference(role);
-            float combatValue = SidearmAllocator.ComputeCombatValue(pawn);
-            float pawnValue = SidearmAllocator.ComputePawnValueScore(pawn);
-
-            DrawBadgeRow(l, pawn, role, context, tier, armorPref);
+            // 食尸鬼额外显示"食尸鬼"徽章，替代护甲偏好（食尸鬼不分配护甲）
+            DrawBadgeRow(l, role, context, tier, armorPref, isGhoul);
 
             l.Gap(4f);
 
             // ===================== 数值摘要：战斗价值 / 价值评分 =====================
             DrawStatRow(l, combatValue, pawnValue);
+
+            // 食尸鬼提示：不参与自动装备
+            if (isGhoul)
+            {
+                l.Gap(4f);
+                GUI.color = new Color(0.95f, 0.4f, 0.3f);
+                Text.Font = GameFont.Tiny;
+                l.Label("AE_GhoulHint".Translate());
+                GUI.color = Color.white;
+                Text.Font = GameFont.Small;
+            }
 
             l.GapLine();
 
@@ -86,37 +140,40 @@ namespace AutoEquipment
 
             l.GapLine();
 
-            // ===================== 锁定 / 角色覆盖 =====================
-            l.CheckboxLabeled("AE_LockGear".Translate(), ref comp.locked);
-            GUI.color = new Color(0.7f, 0.7f, 0.7f);
-            Text.Font = GameFont.Tiny;
-            l.Label("AE_LockGear_Desc".Translate());
-            Text.Font = GameFont.Small;
-            GUI.color = Color.white;
-            l.Gap(2f);
-
-            l.CheckboxLabeled("AE_OverrideRole".Translate(), ref comp.overrideRole);
-            if (comp.overrideRole)
+            if (!isGhoul && comp != null)
             {
-                l.Gap(4f);
-                List<FloatMenuOption> options = new List<FloatMenuOption>();
-                foreach (Role r in System.Enum.GetValues(typeof(Role)))
+                // ===================== 锁定 / 角色覆盖（食尸鬼不显示） =====================
+                l.CheckboxLabeled("AE_LockGear".Translate(), ref comp.locked);
+                GUI.color = new Color(0.7f, 0.7f, 0.7f);
+                Text.Font = GameFont.Tiny;
+                l.Label("AE_LockGear_Desc".Translate());
+                Text.Font = GameFont.Small;
+                GUI.color = Color.white;
+                l.Gap(2f);
+
+                l.CheckboxLabeled("AE_OverrideRole".Translate(), ref comp.overrideRole);
+                if (comp.overrideRole)
                 {
-                    // 闭包捕获：必须用局部变量，避免循环变量全部指向最后一个枚举值
-                    Role localRole = r;
-                    options.Add(new FloatMenuOption(
-                        ("AE_Role_" + r).Translate(),
-                        () => comp.manualRole = localRole));
+                    l.Gap(4f);
+                    List<FloatMenuOption> options = new List<FloatMenuOption>();
+                    foreach (Role r in System.Enum.GetValues(typeof(Role)))
+                    {
+                        // 闭包捕获：必须用局部变量，避免循环变量全部指向最后一个枚举值
+                        Role localRole = r;
+                        options.Add(new FloatMenuOption(
+                            ("AE_Role_" + r).Translate(),
+                            () => comp.manualRole = localRole));
+                    }
+                    if (l.ButtonText("AE_Role".Translate() + ": " + ("AE_Role_" + comp.manualRole).Translate()))
+                    {
+                        Find.WindowStack.Add(new FloatMenu(options));
+                    }
                 }
-                if (l.ButtonText("AE_Role".Translate() + ": " + ("AE_Role_" + comp.manualRole).Translate()))
-                {
-                    Find.WindowStack.Add(new FloatMenu(options));
-                }
+
+                l.GapLine();
             }
 
-            l.GapLine();
-
-            // ===================== 自定义评级识别码 =====================
+            // ===================== 自定义评级识别码（食尸鬼也显示，玩家可参考） =====================
             GUI.color = new Color(0.85f, 0.85f, 0.85f);
             l.Label("AE_ReallocRules_CustomTier".Translate());
             GUI.color = Color.white;
@@ -136,7 +193,7 @@ namespace AutoEquipment
                 : autoTier + "#" + pawnName;
             l.Label("AE_ReallocRules_CurrentTier".Translate() + ": " + tierCode);
 
-            // 两按钮并排：设置自定义档次 / 清除自定义
+            // 两按钮并排：设置自定义档次 / 清除自定义（食尸鬼也允许设置，供评级展示）
             Rect tierBtnRect = l.GetRect(30f);
             float tierBtnWidth = (tierBtnRect.width - 8f) * 0.5f;
             if (Widgets.ButtonText(new Rect(tierBtnRect.x, tierBtnRect.y, tierBtnWidth, 30f),
@@ -168,6 +225,7 @@ namespace AutoEquipment
             l.Gap(4f);
 
             l.End();
+            Widgets.EndScrollView();
 
             // ===================== 底部按钮：全局人物评级 + 全局装备重配 =====================
             // 上方按钮：全局人物评级，弹出 FloatMenu 含应用/清除评级标签两个操作
@@ -205,6 +263,7 @@ namespace AutoEquipment
             }
 
             // 下方按钮：全局装备重配，点击后弹出规则对话框，确认后才执行
+            // 食尸鬼面板也显示此按钮（统一入口），但 GlobalAllocator 内部会跳过食尸鬼
             Rect buttonRect = new Rect(
                 rect.x,
                 tierTagBtnRect.yMax + buttonGap,
@@ -220,47 +279,57 @@ namespace AutoEquipment
         // ===================== 徽章绘制工具 =====================
 
         /// <summary>
-        /// 绘制徽章行：角色 / 情境 / 评级 / 护甲偏好。
-        /// 每个徽章为带底色的小矩形，颜色按类别区分。
+        /// 绘制徽章行：角色 / 情境 / 评级 / 护甲偏好（或食尸鬼徽章）。
+        /// 徽章自适应宽度占满整行，每个徽章等宽分配剩余空间。
         /// </summary>
-        private void DrawBadgeRow(Listing_Standard l, Pawn pawn, Role role,
-            GearContext context, CombatTier tier, ArmorPreference armorPref)
+        private void DrawBadgeRow(Listing_Standard l, Role role, GearContext context,
+            CombatTier tier, ArmorPreference armorPref, bool isGhoul)
         {
-            // 徽章行高度 24f，留出间隙
+            // 徽章行高度 26f
             Rect badgeRow = l.GetRect(26f);
-            float x = badgeRow.x;
             float y = badgeRow.y;
             float h = 24f;
             float gap = 6f;
 
-            // 徽章宽度按内容自适应（固定 70f，足够容纳两字标签 + 值）
-            float roleW = 70f;
-            float ctxW = 70f;
-            float tierW = 50f;
-            float prefW = 60f;
+            // 食尸鬼：4 个徽章 = 角色 + 情境 + 评级 + 食尸鬼徽章
+            // 普通殖民者：4 个徽章 = 角色 + 情境 + 评级 + 护甲偏好
+            int badgeCount = 4;
+            float totalGap = gap * (badgeCount - 1);
+            float badgeWidth = (badgeRow.width - totalGap) / badgeCount;
+
+            float x = badgeRow.x;
 
             // 1. 角色徽章
-            DrawBadge(new Rect(x, y, roleW, h),
+            DrawBadge(new Rect(x, y, badgeWidth, h),
                 ("AE_Role_" + role).Translate(),
                 GetRoleColor(role));
-            x += roleW + gap;
+            x += badgeWidth + gap;
 
             // 2. 情境徽章
-            DrawBadge(new Rect(x, y, ctxW, h),
+            DrawBadge(new Rect(x, y, badgeWidth, h),
                 ("AE_Context_" + context).Translate(),
                 GetContextColor(context));
-            x += ctxW + gap;
+            x += badgeWidth + gap;
 
             // 3. 评级徽章
-            DrawBadge(new Rect(x, y, tierW, h),
+            DrawBadge(new Rect(x, y, badgeWidth, h),
                 tier.ToString(),
                 GetTierColor(tier));
-            x += tierW + gap;
+            x += badgeWidth + gap;
 
-            // 4. 护甲偏好徽章
-            DrawBadge(new Rect(x, y, prefW, h),
-                ("AE_ArmorPref_" + armorPref).Translate(),
-                GetArmorPrefColor(armorPref));
+            // 4. 护甲偏好徽章 / 食尸鬼徽章
+            if (isGhoul)
+            {
+                DrawBadge(new Rect(x, y, badgeWidth, h),
+                    "AE_Badge_Ghoul".Translate(),
+                    new Color(0.6f, 0.2f, 0.6f));  // 紫红，区别于常规护甲偏好
+            }
+            else
+            {
+                DrawBadge(new Rect(x, y, badgeWidth, h),
+                    ("AE_ArmorPref_" + armorPref).Translate(),
+                    GetArmorPrefColor(armorPref));
+            }
         }
 
         /// <summary>
@@ -297,11 +366,13 @@ namespace AutoEquipment
 
         /// <summary>
         /// 绘制数值摘要行：战斗价值 + 价值评分。
+        /// 两个徽章等宽占满整行。
         /// </summary>
         private void DrawStatRow(Listing_Standard l, float combatValue, float pawnValue)
         {
             Rect statRow = l.GetRect(22f);
-            float halfWidth = (statRow.width - 8f) * 0.5f;
+            float gap = 8f;
+            float halfWidth = (statRow.width - gap) * 0.5f;
 
             // 左：战斗价值
             DrawStatBadge(new Rect(statRow.x, statRow.y, halfWidth, statRow.height),
@@ -309,7 +380,7 @@ namespace AutoEquipment
                 new Color(0.2f, 0.4f, 0.6f));
 
             // 右：价值评分
-            DrawStatBadge(new Rect(statRow.x + halfWidth + 8f, statRow.y, halfWidth, statRow.height),
+            DrawStatBadge(new Rect(statRow.x + halfWidth + gap, statRow.y, halfWidth, statRow.height),
                 "AE_Badge_PawnValue".Translate(), pawnValue.ToString("F1"),
                 new Color(0.3f, 0.3f, 0.5f));
         }
@@ -348,8 +419,8 @@ namespace AutoEquipment
             string primaryWeapon = pawn.equipment?.Primary?.LabelShort ?? "AE_None".Translate();
             DrawLabeledRow(l, "AE_PrimaryWeapon".Translate(), primaryWeapon);
 
-            // 副武器
-            if (comp.sidearm != null)
+            // 副武器（食尸鬼通常无 comp，跳过）
+            if (comp != null && comp.sidearm != null)
             {
                 DrawLabeledRow(l, "AE_Sidearm".Translate(), comp.sidearm.LabelShort);
             }

@@ -7,12 +7,28 @@ namespace AutoEquipment
     /// 调试日志工具：受 AESettings.debugLogging 开关控制。
     /// 每次读取开关实时值，玩家切换后立即生效（不缓存）。
     /// 规则依据：Tick 路径日志必须在 if (debugActive) 后短路。
+    /// 关键设计：所有 Log 重载接收 Func&lt;string&gt; 或延迟构造，
+    /// 字符串仅在 IsActive=true 时构造，避免 Tick 路径 GC 压力。
     /// </summary>
     public static class AEDebug
     {
         // 不缓存：玩家可在设置界面随时切换 debugLogging，缓存会导致切换后不生效
         public static bool IsActive => AESettings.debugLogging;
 
+        /// <summary>
+        /// 延迟构造版本：仅在 IsActive 时调用 factory 构造字符串。
+        /// Tick 路径首选此重载，避免字符串插值在调用前已分配。
+        /// </summary>
+        public static void Log(System.Func<string> messageFactory)
+        {
+            if (IsActive) Verse.Log.Message(messageFactory());
+        }
+
+        /// <summary>
+        /// 直接字符串版本：保留兼容旧调用方。
+        /// 注意：调用方传入的字符串在调用前已构造，无法避免 GC。
+        /// 性能路径请改用 Log(Func&lt;string&gt;) 重载。
+        /// </summary>
         public static void Log(string message)
         {
             if (IsActive) Verse.Log.Message(message);

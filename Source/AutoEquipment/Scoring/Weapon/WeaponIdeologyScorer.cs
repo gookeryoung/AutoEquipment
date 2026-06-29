@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Weapon
@@ -40,11 +40,11 @@ namespace AutoEquipment.Scoring.Weapon
 
                 if (isMelee && preceptName.Contains("Melee"))
                 {
-                    breakdown.AddScore(Name, $"{precept.def.label}+近战", preceptScore);
+                    breakdown.AddScore(Name, breakdown.CollectItems ? $"{precept.def.label}+近战" : null, preceptScore);
                 }
                 else if (isRanged && preceptName.Contains("Ranged"))
                 {
-                    breakdown.AddScore(Name, $"{precept.def.label}+远程", preceptScore);
+                    breakdown.AddScore(Name, breakdown.CollectItems ? $"{precept.def.label}+远程" : null, preceptScore);
                 }
             }
         }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using HarmonyLib;
 using RimWorld;
 using Verse;
@@ -20,8 +21,15 @@ namespace AutoEquipment
         public static void Init()
         {
             var harmony = new Harmony(HarmonyID);
-            harmony.PatchAll();
-            Log.Message("[AutoEquipment] Harmony 补丁已应用");
+            // 显式 Patch：避免 PatchAll 扫描整个程序集的开销
+            // 仅 2 个补丁，显式注册更清晰且启动更快
+            harmony.Patch(
+                AccessTools.Method(typeof(Pawn), "SpawnSetup"),
+                postfix: new HarmonyMethod(typeof(Pawn_SpawnSetup_Patch), nameof(Pawn_SpawnSetup_Patch.Postfix)));
+            harmony.Patch(
+                AccessTools.Method(typeof(Pawn_DraftController), "set_Drafted"),
+                postfix: new HarmonyMethod(typeof(DraftController_SetDrafted_Patch), nameof(DraftController_SetDrafted_Patch.Postfix)));
+            Log.Message("[AutoEquipment] Harmony 补丁已应用 (显式注册 2 个 Postfix)");
         }
 
         /// <summary>
@@ -30,27 +38,36 @@ namespace AutoEquipment
         /// 必须在 Pawn.SpawnSetup 时运行时检查并注入。
         /// 此 Postfix 覆盖所有 Pawn 生成场景：新游戏、加载存档、运行时生成。
         /// </summary>
-        [HarmonyPatch(typeof(Pawn), "SpawnSetup")]
         public static class Pawn_SpawnSetup_Patch
         {
-            static void Postfix(Pawn __instance)
+            public static void Postfix(Pawn __instance)
             {
-                // 食尸鬼不参与装备管理，跳过
-                if (DLCCompat.IsGhoul(__instance)) return;
+                // 异常隔离：单个 Pawn 注入失败不应影响其他 Pawn 的 SpawnSetup
+                // 历史教训：未隔离时一个 Pawn 异常会导致后续所有 Pawn 都无 Comp
+                try
+                {
+                    // 食尸鬼不参与装备管理，跳过
+                    if (DLCCompat.IsGhoul(__instance)) return;
 
-                // 仅人类like 种族适合装备管理
-                // 动物、机械族、昆虫、异常实体等不使用武器装备槽
-                if (!PawnSuitabilityChecker.CanManageGear(__instance)) return;
+                    // 仅人类like 种族适合装备管理
+                    // 动物、机械族、昆虫、异常实体等不使用武器装备槽
+                    if (!PawnSuitabilityChecker.CanManageGear(__instance)) return;
 
-                // 已有组件则跳过，避免重复注入
-                if (__instance.GetComp<CompGearManager>() != null) return;
+                    // 已有组件则跳过，避免重复注入
+                    if (__instance.GetComp<CompGearManager>() != null) return;
 
-                // 运行时创建 ThingComp 实例并注入
-                // 复现 Pawn.AddComps 的标准流程：创建实例 -> 设 parent -> 加入 AllComps -> Initialize
-                var comp = new CompGearManager();
-                comp.parent = __instance;
-                __instance.AllComps.Add(comp);
-                comp.Initialize(new CompProperties_GearManager());
+                    // 运行时创建 ThingComp 实例并注入
+                    // 复现 Pawn.AddComps 的标准流程：创建实例 -> 设 parent -> 加入 AllComps -> Initialize
+                    var comp = new CompGearManager();
+                    comp.parent = __instance;
+                    __instance.AllComps.Add(comp);
+                    comp.Initialize(new CompProperties_GearManager());
+                }
+                catch (Exception ex)
+                {
+                    Log.WarningOnce("[AutoEquipment] Pawn SpawnSetup 注入失败 " + (__instance?.LabelShort ?? "?") + ": " + ex.Message,
+                        (__instance?.thingIDNumber ?? 0) ^ 0x4153);
+                }
             }
         }
 
@@ -118,10 +135,9 @@ namespace AutoEquipment
         /// RimWorld 1.6 起 Pawn_DraftController.SetDrafted 已改为 Drafted 属性，
         /// 改用 MethodType.Setter patch 属性 setter。
         /// </summary>
-        [HarmonyPatch(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted), MethodType.Setter)]
         public static class DraftController_SetDrafted_Patch
         {
-            static void Postfix(Pawn_DraftController __instance, bool value)
+            public static void Postfix(Pawn_DraftController __instance, bool value)
             {
                 // 仅处理「取消征召」事件（value=false 时为取消征召）
                 if (value) return;
@@ -136,7 +152,7 @@ namespace AutoEquipment
                 {
                     // 异常隔离：单个 Pawn 取消征召失败不应影响其他 Pawn
                     try { comp.OnUndraft(); }
-                    catch (System.Exception ex)
+                    catch (Exception ex)
                     {
                         Log.Warning("[AutoEquipment] " + pawn.LabelShort + " 取消征召恢复失败: " + ex.Message);
                     }

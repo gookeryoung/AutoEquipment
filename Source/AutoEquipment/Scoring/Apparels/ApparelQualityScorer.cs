@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -17,7 +17,7 @@ namespace AutoEquipment.Scoring.Apparels
             {
                 int qualityValue = (int)quality - 2; // Normal=0
                 float score = qualityValue * 15f; // 防具品质权重固定 15
-                breakdown.AddScore(Name, $"{quality}(等级{qualityValue})", score);
+                breakdown.AddScore(Name, breakdown.CollectItems ? $"{quality}(等级{qualityValue})" : null, score);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using RimWorld;
+using RimWorld;
 using Verse;
 
 namespace AutoEquipment.Scoring.Apparels
@@ -16,7 +16,7 @@ namespace AutoEquipment.Scoring.Apparels
             if (gear.HitPoints < gear.MaxHitPoints)
             {
                 float hpPct = (float)gear.HitPoints / gear.MaxHitPoints;
-                breakdown.ApplyMultiplier(Name, $"HP {gear.HitPoints}/{gear.MaxHitPoints}", hpPct);
+                breakdown.ApplyMultiplier(Name, breakdown.CollectItems ? $"HP {gear.HitPoints}/{gear.MaxHitPoints}" : null, hpPct);
             }
         }
     }
