@@ -76,6 +76,17 @@ namespace AutoEquipment
                 return;
             }
 
+            // 兜底防御：CanManageGear 检查覆盖旧存档已注入异常 Comp 的情况
+            // 场景：旧版本 CanManageGearDef 逻辑差异、其他 mod 冲突、玩家控制机械族（Mechinator DLC）
+            // 机械族/动物/昆虫被注入 comp 后，Tick 时访问 pawn.skills 等会抛 NRE
+            // 必须在所有逻辑之前自移除，避免 Tick 持续空转与异常刷屏
+            if (!PawnSuitabilityChecker.CanManageGear(Pawn))
+            {
+                if (parent?.AllComps != null && parent.AllComps.Contains(this))
+                    parent.AllComps.Remove(this);
+                return;
+            }
+
             // 仅管理玩家阵营的装备，访客不处理
             if (Pawn.Faction != Faction.OfPlayer) return;
             if (Pawn.IsPrisoner) return;

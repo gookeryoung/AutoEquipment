@@ -61,7 +61,11 @@ namespace AutoEquipment
         {
             if (pawn == null) return GearContext.Normal;
 
-            // 战斗：已征召或正在逃跑
+            // 食尸鬼直接返回 Normal：食尸鬼不参与装备管理，
+            // 其 CurJob 可能是"等待"类被误判为 Work，显示"工作中"会误导玩家
+            if (DLCCompat.IsGhoul(pawn)) return GearContext.Normal;
+
+            // 征召中或正在逃跑：战斗情境
             if (pawn.Drafted)
                 return LogContextIfChanged(pawn, GearContext.Combat, "已征召");
 

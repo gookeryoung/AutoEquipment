@@ -140,7 +140,7 @@ namespace AutoEquipment
             if (isGhoul)
             {
                 l.Gap(4f);
-                DrawWarningCard(l.GetRect(44f), "AE_GhoulHint".Translate());
+                DrawWarningCard(l, "AE_GhoulHint".Translate());
             }
 
             EndSection(l);
@@ -333,10 +333,22 @@ namespace AutoEquipment
 
         /// <summary>
         /// 绘制警告卡片：带边框与警告色背景，用于食尸鬼等需要醒目提示的场景。
-        /// 比 Tiny 文字更易被玩家注意到。
+        /// 高度自适应：根据文本长度用 Text.CalcHeight 计算实际需要的高度，
+        /// 避免长文本被截断显示不全。
         /// </summary>
-        private void DrawWarningCard(Rect rect, string text)
+        private void DrawWarningCard(Listing_Standard l, string text)
         {
+            // 先用 Tiny 字体计算文本实际需要的高度
+            // 内缩进 6f 两侧 = 12f，所以计算宽度 = 列宽 - 12f
+            Text.Font = GameFont.Tiny;
+            float textWidth = l.ColumnWidth - 12f;
+            float textHeight = Text.CalcHeight(text, textWidth);
+            // 卡片高度 = 文本高度 + 上下内边距 12f，最小 32f
+            float cardHeight = System.Math.Max(textHeight + 12f, 32f);
+            Text.Font = GameFont.Small;
+
+            Rect rect = l.GetRect(cardHeight);
+
             // 警告色背景
             Widgets.DrawBoxSolid(rect, ColorWarningBg);
             // 警告色边框
@@ -387,8 +399,11 @@ namespace AutoEquipment
             x += badgeWidth + gap;
 
             // 2. 情境徽章 + Tooltip（触发条件）
+            // 食尸鬼强制显示"闲置"：其 CurJob 可能是等待类，ContextDetector 已返回 Normal，
+            // 但 Normal 翻译"日常"对食尸鬼有误导，"闲置"更准确
             Rect ctxRect = new Rect(x, y, badgeWidth, h);
-            DrawBadge(ctxRect, ("AE_Context_" + context).Translate(), GetContextColor(context));
+            string ctxText = isGhoul ? "AE_Context_Idle".Translate() : ("AE_Context_" + context).Translate();
+            DrawBadge(ctxRect, ctxText, GetContextColor(context));
             TooltipHandler.TipRegion(ctxRect, ("AE_TT_Context_" + context).Translate());
             x += badgeWidth + gap;
 
