@@ -461,7 +461,27 @@ Source/AutoEquipment/
 | 评级徽章 | `Textures/UI/Icons/Tier/Tier_{S,A,B,C,D,X}.png` | ITab 评级徽章，替代纯色块 |
 | 角色徽章 | `Textures/UI/Icons/Role/Role_{Brawler,Shooter,Doctor,Hunter,Worker,Pacifist,Leader,Default}.png` | ITab 角色徽章，左侧图标 + 右侧角色名 |
 
-评级徽章与角色徽章均在 ITab 静态加载（`ContentFinder<Texture2D>.Get(path, false)`），无图时回退纯色块 + 文字。角色徽章因图标内无文字，绘制时在图标右侧显示中文角色名（`DrawRoleBadgeWithIcon`）。
+### 资源加载时机
+
+`ITab_GearManager` 标记 `[StaticConstructorOnStartup]`，纹理在主线程启动阶段加载：
+
+```
+ContentFinder<Texture2D>.Get("UI/Icons/Tier/Tier_S", false)  // reportFailure=false
+```
+
+- **禁止**在普通类的静态字段初始化器中调用 `ContentFinder`——类型首次访问可能在非主线程（DefDatabase 扫描、Harmony 反射），触发 `Tried to get a resource from a different thread` 异常
+- `[StaticConstructorOnStartup]` 让 RimWorld 在主线程启动时主动触发静态构造，抢占其他线程
+- `reportFailure=false` 时未找到返回 null，调用方处理 null 回退纯色块 + 文字
+- 角色徽章因图标内无文字，绘制时在图标右侧显示中文角色名（`DrawRoleBadgeWithIcon`）
+
+### ITab 面板文字防换行
+
+中文文字超宽时 `Widgets.Label` 默认换行，会撑乱单行布局导致显示不全。本 MOD 强制约定：
+
+- 所有徽章/标签/数值行绘制前 `Text.WordWrap = false`，绘制后恢复
+- 标签宽度用 `Text.CalcSize(labelText).x + 留白` 动态计算，禁止固定宽度
+- 超宽文字截断优于换行：截断只丢尾部，换行会撑乱整个布局
+- 完整信息放 `TooltipHandler.TipRegion`，徽章/标签本身只做概览
 
 ## 构建
 
@@ -494,7 +514,9 @@ make rebuild-check  # 完整重建后检查
 | `GlobalAllocator.cs` / `Dialog_GlobalReallocate.cs` | `## 全局重配` 与 `### 保护规则` |
 | `SGSettings.cs` 排序相关 | `### 殖民者栏默认排序` 表格 |
 | 新增/删除源文件 | `### 目录结构` 代码块 |
-| 新增图片资源 | `## 图片资源` 表格 |
+| 新增/修改图片资源 | `## 图片资源` 表格与 `### 资源加载时机` |
+| `ITab_GearManager.cs` 静态资源加载 | `### 资源加载时机` |
+| `ITab_GearManager.cs` 文字绘制逻辑 | `### ITab 面板文字防换行` |
 
 ## 许可证
 

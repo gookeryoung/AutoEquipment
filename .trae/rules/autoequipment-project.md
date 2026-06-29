@@ -119,3 +119,23 @@
 - README.md 与规则文件均以中文为主语言
 - 公式、字段名、类名保留英文原文
 - 玩家可见的说明必须可读，禁止纯技术黑话
+
+## UI 资源加载
+
+- ITab_GearManager 标记 `[StaticConstructorOnStartup]`，确保 `tierBadgeTextures`/`roleBadgeTextures` 在主线程加载
+- 纹理路径约定：
+  - 评级徽章：`Textures/UI/Icons/Tier/Tier_{S,A,B,C,D,X}.png`（64×64）
+  - 角色徽章：`Textures/UI/Icons/Role/Role_{Brawler,Shooter,Doctor,Hunter,Worker,Pacifist,Leader,Default}.png`（64×64）
+  - Mod 图标：`Textures/UI/Icons/ModIcon.png`（128×128，`About.xml` 的 `modIconPath`）
+- 所有 `ContentFinder<Texture2D>.Get` 使用 `reportFailure=false`，无图回退纯色块 + 文字
+- 新增枚举值必须同步添加对应 PNG 图片，否则回退纯色块（视觉不统一但不崩溃）
+
+## ITab 面板布局
+
+- 面板尺寸 `360f × 560f`，内容区用 ScrollView 包裹（inner rect 宽度比 outer 少 16f）
+- 缓存周期 60 tick：角色/情境/评级/数值摘要避免每帧重算
+- 徽章行 4 列等宽：角色 / 情境 / 评级 / 护甲偏好（食尸鬼用"食尸鬼"徽章替代护甲偏好）
+- **文字防换行强制**：所有 `Widgets.Label` 绘制前 `Text.WordWrap = false`，绘制后恢复
+- **标签宽度动态计算**：用 `Text.CalcSize(labelText).x + 留白`，禁止固定宽度（如 `60f`）
+- 完整信息放 Tooltip，徽章/标签本身只做概览
+- 底部双按钮：全局人物评级 + 全局装备重配，固定位置不随滚动

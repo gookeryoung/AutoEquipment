@@ -32,6 +32,30 @@
 - 优先用 `CheckboxLabeled` 替代独立标签+控件
 - 长文本用 `Text.CalcHeight` 计算实际高度自适应，避免截断
 
+### 文字防换行（强制）
+
+中文文字超宽时 `Widgets.Label` 默认换行，会导致单行内容撑成两行而显示不全。
+
+- **徽章、标签、数值行**等单行显示场景，绘制前必须 `Text.WordWrap = false`，绘制后恢复
+- 禁止用固定宽度（如 `60f`、`width*0.4f`）分配标签区——中文长度不可预测
+- 标签宽度必须用 `Text.CalcSize(labelText).x + 留白` 动态计算
+- 超宽文字截断优于换行：截断只丢尾部，换行会撑乱整个布局
+- 完整信息放 `TooltipHandler.TipRegion`，徽章/标签本身只做概览显示
+- 绘制方法模板：保存 `prevWrap` → 设 `false` → 绘制 → 恢复 `prevWrap`
+
+## 静态资源加载
+
+- **禁止**在普通类的静态字段初始化器中调用 `ContentFinder`/`DefDatabase` 查询
+  - 静态字段初始化器在类型首次访问时执行，时机由 CLR 决定，可能在非主线程（DefDatabase 扫描、Harmony 反射、序列化）
+  - `ContentFinder` 必须在主线程调用，跨线程会抛 `Tried to get a resource from a different thread`
+- 加载纹理/资源的类必须标记 `[StaticConstructorOnStartup]`
+  - RimWorld 会在主线程启动阶段（DefDatabase 加载后）主动触发静态构造，抢占其他线程
+  - 静态字段初始化器会合并进编译器合成的静态构造函数，加特性即生效
+  - ITab 子类、Window 子类、含 `ContentFinder<Texture2D>.Get` 的工具类均需标记
+- 替代方案：`LongEventHandler.ExecuteWhenFinished` 延迟到主线程加载完成
+- 纹理路径用相对路径（相对于 `Textures/` 目录），不含扩展名
+- `ContentFinder<Texture2D>.Get(path, false)`：`reportFailure=false` 时未找到返回 null，调用方必须处理 null 回退
+
 ## Harmony 补丁
 
 - Harmony ID: `作者.mod名`，整个 MOD 单一实例

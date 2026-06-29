@@ -18,7 +18,15 @@ namespace AutoEquipment
     ///
     /// 食尸鬼处理：食尸鬼也显示此面板，展示评级/战斗价值等信息供玩家参考，
     /// 但不参与自动装备分配。面板会显示"食尸鬼"徽章与"不参与自动装备"提示。
+    ///
+    /// 纹理加载机制：
+    /// [StaticConstructorOnStartup] 仅让 RimWorld 在主线程"额外"触发一次静态构造，
+    /// 但 ThingDef.ResolveReferences 在工作线程调用 InspectTabManager.GetSharedInstance
+    /// 时会提前触发静态构造，导致 ContentFinder 跨线程访问崩溃。
+    /// 因此纹理字段初始化为 null，通过 LongEventHandler.ExecuteWhenFinished 延迟到
+    /// 主线程 PlayLoad 完成后填充；在此之前 FillTab 降级为纯色块。
     /// </summary>
+    [StaticConstructorOnStartup]
     public class ITab_GearManager : ITab
     {
         // FillTab 缓存：避免每帧重算角色/情境/评级等
@@ -36,10 +44,25 @@ namespace AutoEquipment
         // ScrollView 滚动位置：static 保持位置，切换 Pawn 时不重置
         private static Vector2 scrollPos = Vector2.zero;
 
-        // ===================== 评级徽章图片缓存 =====================
-        // 静态加载一次，避免每帧 ContentFinder 查询
-        // 路径：Textures/UI/Icons/Tier/Tier_{S,A,B,C,D,X}.png
-        private static readonly Dictionary<CombatTier, Texture2D> tierBadgeTextures = LoadTierBadgeTextures();
+        // ===================== 徽章图片缓存 =====================
+        // 不能用静态字段初始化器调用 ContentFinder：ThingDef.ResolveReferences 在工作线程
+        // 触发本类型静态构造（InspectTabManager.GetSharedInstance），导致跨线程访问崩溃。
+        // [StaticConstructorOnStartup] 无法阻止——它只是让 RimWorld 在主线程"额外"触发一次，
+        // 但若类型被更早访问，静态构造仍会在当时线程立即执行。
+        // 解决方案：字段初始化为 null，通过 LongEventHandler.ExecuteWhenFinished 延迟到
+        // 主线程加载完成后填充；FillTab 调用前若仍为 null 则降级为纯色块。
+        private static Dictionary<CombatTier, Texture2D> tierBadgeTextures;
+        private static Dictionary<Role, Texture2D> roleBadgeTextures;
+
+        static ITab_GearManager()
+        {
+            // 延迟到主线程 PlayLoad 完成后加载纹理，避免跨线程 ContentFinder 访问
+            LongEventHandler.ExecuteWhenFinished(() =>
+            {
+                tierBadgeTextures = LoadTierBadgeTextures();
+                roleBadgeTextures = LoadRoleBadgeTextures();
+            });
+        }
 
         static Dictionary<CombatTier, Texture2D> LoadTierBadgeTextures()
         {
@@ -52,10 +75,6 @@ namespace AutoEquipment
             }
             return dict;
         }
-
-        // ===================== 角色徽章图片缓存 =====================
-        // 路径：Textures/UI/Icons/Role/Role_{Brawler,Shooter,...}.png
-        private static readonly Dictionary<Role, Texture2D> roleBadgeTextures = LoadRoleBadgeTextures();
 
         static Dictionary<Role, Texture2D> LoadRoleBadgeTextures()
         {
@@ -144,7 +163,7 @@ namespace AutoEquipment
 
             // ===================== ScrollView 包裹内容区 =====================
             // 内部 inner rect 从 (0,0) 开始，宽度比 outer 少 16f 预留滚动条
-            float contentHeight = 580f;  // 预估高度并留余量（数值行+护甲小标签各增一行）
+            float contentHeight = 590f;  // 预估高度并留余量（数值行增高+间距）
             Rect innerRect = new Rect(0f, 0f, contentRect.width - 16f, contentHeight);
             Widgets.BeginScrollView(contentRect, ref scrollPos, innerRect);
 
@@ -429,9 +448,9 @@ namespace AutoEquipment
             float x = badgeRow.x;
 
             // 1. 角色徽章 + Tooltip（判定规则）
-            // 优先使用图片徽章（UI/Icons/Role/Role_X），无图时回退纯色块
+            // 优先使用图片徽章（UI/Icons/Role/Role_X），无图或纹理未加载时回退纯色块
             Rect roleRect = new Rect(x, y, badgeWidth, h);
-            if (roleBadgeTextures.TryGetValue(role, out Texture2D roleTex))
+            if (roleBadgeTextures != null && roleBadgeTextures.TryGetValue(role, out Texture2D roleTex))
             {
                 DrawRoleBadgeWithIcon(roleRect, roleTex, GetRoleColor(role), ("AE_Role_" + role).Translate());
             }
@@ -452,9 +471,9 @@ namespace AutoEquipment
             x += badgeWidth + gap;
 
             // 3. 评级徽章 + Tooltip（计算来源）
-            // 优先使用图片徽章（Text UI/Icons/Tier/Tier_X），无图时回退纯色块
+            // 优先使用图片徽章（Text UI/Icons/Tier/Tier_X），无图或纹理未加载时回退纯色块
             Rect tierRect = new Rect(x, y, badgeWidth, h);
-            if (tierBadgeTextures.TryGetValue(tier, out Texture2D tierTex))
+            if (tierBadgeTextures != null && tierBadgeTextures.TryGetValue(tier, out Texture2D tierTex))
             {
                 DrawTierBadgeWithIcon(tierRect, tierTex, GetTierColor(tier));
             }
@@ -482,12 +501,14 @@ namespace AutoEquipment
 
         /// <summary>
         /// 绘制单个徽章：带底色 + 居中文字。
+        /// 关闭 WordWrap 防止中文换行导致显示不全（超宽截断优于换行撑乱布局）。
         /// </summary>
         private void DrawBadge(Rect rect, string text, Color bgColor)
         {
             // 保存原颜色，绘制后恢复
             Color prevColor = GUI.color;
             Color prevBg = GUI.backgroundColor;
+            bool prevWrap = Text.WordWrap;
 
             // 半透明底色：让徽章不抢眼但清晰可辨
             Color bg = bgColor;
@@ -504,9 +525,11 @@ namespace AutoEquipment
             float brightness = bgColor.r * 0.299f + bgColor.g * 0.587f + bgColor.b * 0.114f;
             GUI.color = brightness > 0.5f ? Color.black : Color.white;
             Text.Anchor = TextAnchor.MiddleCenter;
-            Text.Font = GameFont.Small;
+            Text.Font = GameFont.Tiny;
+            Text.WordWrap = false;
             Widgets.Label(rect, text);
             Text.Anchor = TextAnchor.UpperLeft;
+            Text.WordWrap = prevWrap;
 
             GUI.color = prevColor;
             GUI.backgroundColor = prevBg;
@@ -549,12 +572,15 @@ namespace AutoEquipment
         /// <summary>
         /// 绘制带图标的角色徽章：左侧小圆图标 + 右侧中文角色名。
         /// 与评级徽章不同——角色图标内无文字，需在图标右侧显示角色名（如"格斗者"）。
+        /// 关闭 WordWrap：中文角色名（如"和平主义者"5字）超宽时截断而非换行，避免撑乱徽章行。
+        /// 图标缩小到 14f 给文字留更多空间。
         /// </summary>
         private void DrawRoleBadgeWithIcon(Rect rect, Texture2D icon, Color bgColor, string label)
         {
             Color prevColor = GUI.color;
             Color prevBg = GUI.backgroundColor;
             TextAnchor prevAnchor = Text.Anchor;
+            bool prevWrap = Text.WordWrap;
 
             // 半透明底色
             Color bg = bgColor;
@@ -565,16 +591,16 @@ namespace AutoEquipment
             GUI.color = Color.white * 0.5f;
             Widgets.DrawBox(rect, 1);
 
-            // 左侧图标：正方形，边长 = 徽章高度 - 4
-            float iconSize = rect.height - 4f;
-            Rect iconRect = new Rect(rect.x + 3f, rect.y + 2f, iconSize, iconSize);
+            // 左侧图标：缩小到 14f 给文字留空间（原 height-4=20f 占用过多）
+            float iconSize = 14f;
+            Rect iconRect = new Rect(rect.x + 3f, rect.y + (rect.height - iconSize) * 0.5f, iconSize, iconSize);
             GUI.color = Color.white;
             if (icon != null)
             {
                 GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
             }
 
-            // 右侧角色名：图标右侧剩余空间，垂直居中
+            // 右侧角色名：图标右侧剩余空间，垂直居中，关闭换行
             float labelX = iconRect.xMax + 4f;
             float labelWidth = rect.xMax - labelX - 3f;
             if (labelWidth > 0f)
@@ -582,9 +608,11 @@ namespace AutoEquipment
                 Rect labelRect = new Rect(labelX, rect.y, labelWidth, rect.height);
                 Text.Anchor = TextAnchor.MiddleLeft;
                 Text.Font = GameFont.Tiny;
+                Text.WordWrap = false;
                 GUI.color = Color.white;
                 Widgets.Label(labelRect, label);
                 Text.Font = GameFont.Small;
+                Text.WordWrap = prevWrap;
             }
 
             Text.Anchor = prevAnchor;
@@ -595,17 +623,20 @@ namespace AutoEquipment
         /// <summary>
         /// 绘制数值摘要：战斗价值 + 价值评分，各占一整行。
         /// 设计为垂直堆叠避免半宽截断：中文标签 + 数值在半宽内易被截断。
+        /// 行高 24f 留足上下内边距，避免 Tiny 字号文字贴边显示不全。
         /// </summary>
         private void DrawStatRow(Listing_Standard l, float combatValue, float pawnValue)
         {
             // 战斗价值（整行）
-            Rect cvRect = l.GetRect(20f);
+            Rect cvRect = l.GetRect(24f);
             DrawStatBadge(cvRect, "AE_Badge_CombatValue".Translate(), combatValue.ToString("F1"),
                 new Color(0.2f, 0.4f, 0.6f));
             TooltipHandler.TipRegion(cvRect, "AE_TT_CombatValue".Translate());
 
+            l.Gap(2f);
+
             // 价值评分（整行）
-            Rect pvRect = l.GetRect(20f);
+            Rect pvRect = l.GetRect(24f);
             DrawStatBadge(pvRect, "AE_Badge_PawnValue".Translate(), pawnValue.ToString("F1"),
                 new Color(0.3f, 0.3f, 0.5f));
             TooltipHandler.TipRegion(pvRect, "AE_TT_PawnValue".Translate());
@@ -613,11 +644,12 @@ namespace AutoEquipment
 
         /// <summary>
         /// 绘制带标签+数值的小徽章。
-        /// 左对齐与武器标签保持视觉一致。
+        /// 左对齐与武器标签保持视觉一致。关闭 WordWrap 防止数值换行。
         /// </summary>
         private void DrawStatBadge(Rect rect, string label, string value, Color bgColor)
         {
             Color prev = GUI.color;
+            bool prevWrap = Text.WordWrap;
 
             Color bg = bgColor;
             bg.a = 0.85f;
@@ -626,13 +658,15 @@ namespace AutoEquipment
             GUI.color = Color.white * 0.5f;
             Widgets.DrawBox(rect, 1);
 
-            // 文字：标签:数值（左对齐）
+            // 文字：标签:数值（左对齐），关闭换行避免长数值截断
             GUI.color = Color.white;
             Text.Anchor = TextAnchor.MiddleLeft;
             Text.Font = GameFont.Tiny;
+            Text.WordWrap = false;
             Widgets.Label(rect.ContractedBy(6f), label + ": " + value);
             Text.Anchor = TextAnchor.UpperLeft;
             Text.Font = GameFont.Small;
+            Text.WordWrap = prevWrap;
 
             GUI.color = prev;
         }
@@ -664,6 +698,7 @@ namespace AutoEquipment
         /// <summary>
         /// 绘制小标签：高度更矮、字号 Tiny，用于辅助信息（如护甲数量）。
         /// 与主装备标签视觉区分，避免抢占主武器视觉焦点。
+        /// 关闭 WordWrap；labelWidth 用 Text.CalcSize 动态计算，确保中文标签完整显示。
         /// </summary>
         private void DrawSmallTag(Rect rect, string label, string value, Color bgColor)
         {
@@ -672,16 +707,25 @@ namespace AutoEquipment
             Widgets.DrawBoxSolid(rect, bg);
 
             Color prev = GUI.color;
+            bool prevWrap = Text.WordWrap;
             Text.Anchor = TextAnchor.MiddleLeft;
             Text.Font = GameFont.Tiny;
+            Text.WordWrap = false;
+
+            // 动态计算标签宽度（+冒号+留白），避免固定 70f 截断中文标签
+            string labelText = label + ":";
+            Vector2 labelSize = Text.CalcSize(labelText);
+            float labelWidth = labelSize.x + 4f;
+            float padLeft = 6f;
 
             GUI.color = ColorLabelGray;
-            Widgets.Label(new Rect(rect.x + 6f, rect.y, 70f, rect.height), label + ":");
+            Widgets.Label(new Rect(rect.x + padLeft, rect.y, labelWidth, rect.height), labelText);
             GUI.color = Color.white;
-            Widgets.Label(new Rect(rect.x + 76f, rect.y, rect.width - 82f, rect.height), value);
+            Widgets.Label(new Rect(rect.x + padLeft + labelWidth, rect.y, rect.width - padLeft - labelWidth - 4f, rect.height), value);
 
             Text.Anchor = TextAnchor.UpperLeft;
             Text.Font = GameFont.Small;
+            Text.WordWrap = prevWrap;
             GUI.color = prev;
         }
 
@@ -699,6 +743,7 @@ namespace AutoEquipment
         /// <summary>
         /// 在指定 Rect 绘制带半透明底色的装备标签。
         /// 布局：[标签:] [值]，全部左对齐，底色半透明。
+        /// 关闭 WordWrap；labelWidth 用 Text.CalcSize 动态计算，避免固定 60f 截断中文标签。
         /// </summary>
         private void DrawGearTagOnRect(Rect rect, string label, string value, Color bgColor)
         {
@@ -709,36 +754,54 @@ namespace AutoEquipment
 
             // 左对齐绘制标签+值
             Color prev = GUI.color;
+            bool prevWrap = Text.WordWrap;
             Text.Anchor = TextAnchor.MiddleLeft;
             Text.Font = GameFont.Small;
+            Text.WordWrap = false;
+
+            // 动态计算标签宽度（原固定 60f 会截断"已穿戴的衣物"等长标签）
+            string labelText = label + ":";
+            Vector2 labelSize = Text.CalcSize(labelText);
+            float labelWidth = labelSize.x + 4f;
+            float padLeft = 6f;
 
             // 标签（灰色）
             GUI.color = ColorLabelGray;
-            float labelWidth = 60f;
-            Widgets.Label(new Rect(rect.x + 6f, rect.y, labelWidth, rect.height), label + ":");
+            Widgets.Label(new Rect(rect.x + padLeft, rect.y, labelWidth, rect.height), labelText);
 
             // 值（白色）
             GUI.color = Color.white;
-            Widgets.Label(new Rect(rect.x + 6f + labelWidth, rect.y, rect.width - labelWidth - 12f, rect.height), value);
+            Widgets.Label(new Rect(rect.x + padLeft + labelWidth, rect.y, rect.width - padLeft - labelWidth - 6f, rect.height), value);
 
             Text.Anchor = TextAnchor.UpperLeft;
             Text.Font = GameFont.Small;
+            Text.WordWrap = prevWrap;
             GUI.color = prev;
         }
 
         /// <summary>
         /// 绘制"标签: 值"行，标签灰色，值白色。
+        /// 关闭 WordWrap；labelWidth 用 Text.CalcSize 动态计算，避免固定 40% 截断中文标签。
         /// </summary>
         private void DrawLabeledRow(Listing_Standard l, string label, string value)
         {
             Rect row = l.GetRect(22f);
+            bool prevWrap = Text.WordWrap;
             GUI.color = ColorLabelGray;
             Text.Anchor = TextAnchor.MiddleLeft;
             Text.Font = GameFont.Small;
-            Widgets.Label(new Rect(row.x, row.y, row.width * 0.4f, row.height), label + ":");
+            Text.WordWrap = false;
+
+            // 动态计算标签宽度，避免固定 40% 截断
+            string labelText = label + ":";
+            Vector2 labelSize = Text.CalcSize(labelText);
+            float labelWidth = labelSize.x + 4f;
+
+            Widgets.Label(new Rect(row.x, row.y, labelWidth, row.height), labelText);
             GUI.color = Color.white;
-            Widgets.Label(new Rect(row.x + row.width * 0.4f, row.y, row.width * 0.6f, row.height), value);
+            Widgets.Label(new Rect(row.x + labelWidth, row.y, row.width - labelWidth - 4f, row.height), value);
             Text.Anchor = TextAnchor.UpperLeft;
+            Text.WordWrap = prevWrap;
             GUI.color = Color.white;
         }
 
