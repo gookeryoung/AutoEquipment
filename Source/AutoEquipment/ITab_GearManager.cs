@@ -111,7 +111,7 @@ namespace AutoEquipment
 
             // ===================== ScrollView 包裹内容区 =====================
             // 内部 inner rect 从 (0,0) 开始，宽度比 outer 少 16f 预留滚动条
-            float contentHeight = 540f;  // 预估高度并留余量
+            float contentHeight = 580f;  // 预估高度并留余量（数值行+护甲小标签各增一行）
             Rect innerRect = new Rect(0f, 0f, contentRect.width - 16f, contentHeight);
             Widgets.BeginScrollView(contentRect, ref scrollPos, innerRect);
 
@@ -486,23 +486,19 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 绘制数值摘要行：战斗价值 + 价值评分。
-        /// 两个徽章等宽占满整行，均挂载 Tooltip 显示计算公式。
+        /// 绘制数值摘要：战斗价值 + 价值评分，各占一整行。
+        /// 设计为垂直堆叠避免半宽截断：中文标签 + 数值在半宽内易被截断。
         /// </summary>
         private void DrawStatRow(Listing_Standard l, float combatValue, float pawnValue)
         {
-            Rect statRow = l.GetRect(22f);
-            float gap = 8f;
-            float halfWidth = (statRow.width - gap) * 0.5f;
-
-            // 左：战斗价值 + Tooltip 公式
-            Rect cvRect = new Rect(statRow.x, statRow.y, halfWidth, statRow.height);
+            // 战斗价值（整行）
+            Rect cvRect = l.GetRect(20f);
             DrawStatBadge(cvRect, "AE_Badge_CombatValue".Translate(), combatValue.ToString("F1"),
                 new Color(0.2f, 0.4f, 0.6f));
             TooltipHandler.TipRegion(cvRect, "AE_TT_CombatValue".Translate());
 
-            // 右：价值评分 + Tooltip 说明
-            Rect pvRect = new Rect(statRow.x + halfWidth + gap, statRow.y, halfWidth, statRow.height);
+            // 价值评分（整行）
+            Rect pvRect = l.GetRect(20f);
             DrawStatBadge(pvRect, "AE_Badge_PawnValue".Translate(), pawnValue.ToString("F1"),
                 new Color(0.3f, 0.3f, 0.5f));
             TooltipHandler.TipRegion(pvRect, "AE_TT_PawnValue".Translate());
@@ -535,32 +531,51 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 绘制装备摘要：主武器/副武器统一用带半透明底色的标签，左对齐显示。
-        /// 护甲数量用徽章样式，与武器标签视觉协调。
+        /// 绘制装备摘要：主武器 → 副武器 → 已穿戴衣物（小标签）。
+        /// 主/副武器用带半透明底色的整行标签；护甲数量用小标签行附在最后。
         /// </summary>
         private void DrawEquipmentSummary(Listing_Standard l, Pawn pawn, CompGearManager comp)
         {
-            // 主武器（占满整行，名字通常较长）
+            // 主武器（整行）
             string primaryWeapon = pawn.equipment?.Primary?.LabelShort ?? "AE_None".Translate();
             DrawGearTag(l, "AE_PrimaryWeapon".Translate(), primaryWeapon, new Color(0.25f, 0.35f, 0.50f));
 
-            // 副武器 + 护甲数量合并一行：左 62% 副武器，右 38% 护甲数量
-            Rect secondRow = l.GetRect(24f);
+            // 副武器（整行）
             // C# 7.3 不支持 string 与 TaggedString 之间的条件表达式，先转 string
             string sidearmLabel = (comp != null && comp.sidearm != null)
                 ? comp.sidearm.LabelShort
                 : "AE_None".Translate().ToString();
+            DrawGearTag(l, "AE_Sidearm".Translate(), sidearmLabel, new Color(0.30f, 0.30f, 0.40f));
+
+            // 已穿戴衣物（小标签，紧贴装备摘要末尾）
             int wornCount = pawn.apparel?.WornApparel.Count ?? 0;
-
-            // 左：副武器（带半透明底色，与主武器风格一致）
-            float sidearmWidth = secondRow.width * 0.62f;
-            DrawGearTagOnRect(new Rect(secondRow.x, secondRow.y, sidearmWidth, secondRow.height),
-                "AE_Sidearm".Translate(), sidearmLabel, new Color(0.30f, 0.30f, 0.40f));
-
-            // 右：护甲数量（带底色徽章，左对齐保持视觉一致）
-            Rect armorBadgeRect = new Rect(secondRow.x + secondRow.width * 0.62f, secondRow.y, secondRow.width * 0.38f, secondRow.height);
-            DrawStatBadge(armorBadgeRect, "AE_WornApparel".Translate(), wornCount.ToString(),
+            Rect apparelRect = l.GetRect(18f);
+            DrawSmallTag(apparelRect, "AE_WornApparel".Translate(), wornCount.ToString(),
                 new Color(0.35f, 0.35f, 0.4f));
+        }
+
+        /// <summary>
+        /// 绘制小标签：高度更矮、字号 Tiny，用于辅助信息（如护甲数量）。
+        /// 与主装备标签视觉区分，避免抢占主武器视觉焦点。
+        /// </summary>
+        private void DrawSmallTag(Rect rect, string label, string value, Color bgColor)
+        {
+            Color bg = bgColor;
+            bg.a = 0.5f;
+            Widgets.DrawBoxSolid(rect, bg);
+
+            Color prev = GUI.color;
+            Text.Anchor = TextAnchor.MiddleLeft;
+            Text.Font = GameFont.Tiny;
+
+            GUI.color = ColorLabelGray;
+            Widgets.Label(new Rect(rect.x + 6f, rect.y, 70f, rect.height), label + ":");
+            GUI.color = Color.white;
+            Widgets.Label(new Rect(rect.x + 76f, rect.y, rect.width - 82f, rect.height), value);
+
+            Text.Anchor = TextAnchor.UpperLeft;
+            Text.Font = GameFont.Small;
+            GUI.color = prev;
         }
 
         /// <summary>

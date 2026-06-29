@@ -200,8 +200,9 @@
   <AE_TT_LockGear>When checked, this colonist's gear is not auto-managed</AE_TT_LockGear>
   <AE_TT_OverrideRole>When checked, manually set role overrides auto detection</AE_TT_OverrideRole>
   <AE_TT_GlobalTierTag>Add tier prefix to colonist Nick for quick identification of value.
-"Apply tier prefix and sort by value" also reorders the colonist bar: high-value colonists on the left for quick selection.
-"Apply tier prefix and reorder by role" reorders by role group: Brawler -> Shooter -> Hunter -> Leader -> Doctor -> Worker -> Pacifist, within group by combat value desc.
-Clear restores original names and keeps the colonist bar order.</AE_TT_GlobalTierTag>
+"Apply tier prefix and sort by value" reorders the colonist bar: by tier S->A->B->C->D->X from left to right, within same tier by combat value desc.
+"Apply tier prefix and reorder by role" reorders by role group: Brawler -> Shooter -> Doctor -> Worker -> Pacifist -> Hunter -> Leader, within role by tier desc.
+Clear restores original names and keeps the colonist bar order.
+"Global Gear Reallocate" does NOT change the colonist bar order.</AE_TT_GlobalTierTag>
   <AE_TT_GlobalReallocate>Drop all colonist weapons and apparel, reallocate by combat value desc. Ghouls are skipped.</AE_TT_GlobalReallocate>
 </LanguageData>

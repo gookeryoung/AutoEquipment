@@ -207,21 +207,21 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 应用评级前缀并按战斗价值降序重排殖民者栏。
-        /// 战斗价值 = SidearmAllocator.ComputeCombatValue（射击×兴趣乘数 + 近战×兴趣乘数）。
-        /// 高价值殖民者排在殖民者栏左侧，便于快速选中。
+        /// 应用评级前缀并按评级降序重排殖民者栏。
+        /// 排序规则：先按 CombatTier 降序（S→A→B→C→D→X），同档内按 ComputeCombatValue 降序。
+        /// S 档殖民者排在殖民者栏左侧，X 档（和平主义者等）排在最右。
         /// </summary>
         public static int ApplyTierTagsAndSortByValue()
         {
             int touched = ApplyTierTagsToAllPawns();
-            ReorderColonistBar(ComparePawnByCombatValueDesc);
+            ReorderColonistBar(ComparePawnByTierThenValueDesc);
             return touched;
         }
 
         /// <summary>
         /// 应用评级前缀并按角色分组重排殖民者栏。
-        /// 角色顺序：Brawler → Shooter → Hunter → Leader → Doctor → Worker → Pacifist → Default。
-        /// 同角色内按战斗价值降序，便于同角色殖民者聚集。
+        /// 角色顺序：Brawler → Shooter → Doctor → Worker → Pacifist → Hunter → Leader → Default。
+        /// 同角色内按评级降序（S→A→B→C→D→X），同档内按战斗价值降序。
         /// </summary>
         public static int ApplyTierTagsAndSortByRole()
         {
@@ -256,31 +256,38 @@ namespace AutoEquipment
         }
 
         /// <summary>
-        /// 战斗价值降序比较器：高价值在前。
+        /// 评级降序比较器：先按 CombatTier 降序（S→A→B→C→D→X），
+        /// 同档内再按 ComputeCombatValue 降序。
+        /// 设计意图：和平主义者（X 档）即使技能高也排在最右，
+        /// 避免高技能的 X 档殖民者挤占 S/A 档位置。
         /// </summary>
-        private static int ComparePawnByCombatValueDesc(Pawn a, Pawn b)
+        private static int ComparePawnByTierThenValueDesc(Pawn a, Pawn b)
         {
+            // CombatTier 枚举值：X=0, D=1, C=2, B=3, A=4, S=5，降序即 S 在前
+            CombatTier ta = SidearmAllocator.GetCombatTier(a);
+            CombatTier tb = SidearmAllocator.GetCombatTier(b);
+            if (ta != tb) return tb.CompareTo(ta);
             float va = SidearmAllocator.ComputeCombatValue(a);
             float vb = SidearmAllocator.ComputeCombatValue(b);
             return vb.CompareTo(va);
         }
 
         /// <summary>
-        /// 角色优先级 + 战斗价值降序比较器。
-        /// 角色顺序：Brawler(0) → Shooter(1) → Hunter(2) → Leader(3) → Doctor(4) → Worker(5) → Pacifist(6) → Default(99)。
-        /// 同角色内按战斗价值降序。
+        /// 角色优先级 + 评级降序比较器。
+        /// 角色顺序：Brawler(0) → Shooter(1) → Doctor(2) → Worker(3) → Pacifist(4) → Hunter(5) → Leader(6) → Default(99)。
+        /// 同角色内按评级降序（S→A→B→C→D→X），同档内按战斗价值降序。
         /// </summary>
         private static int ComparePawnByRoleThenValueDesc(Pawn a, Pawn b)
         {
             int ra = GetRoleOrder(RoleDetector.DetectRole(a));
             int rb = GetRoleOrder(RoleDetector.DetectRole(b));
             if (ra != rb) return ra.CompareTo(rb);
-            return ComparePawnByCombatValueDesc(a, b);
+            return ComparePawnByTierThenValueDesc(a, b);
         }
 
         /// <summary>
         /// 获取角色排序优先级：数字小的排前面。
-        /// 顺序设计：战斗角色（Brawler/Shooter/Hunter）→ 领袖 → 后勤（Doctor/Worker/Pacifist）→ 默认。
+        /// 顺序设计：前排战斗（Brawler/Shooter）→ 后勤（Doctor/Worker/Pacifist）→ 其他（Hunter/Leader）→ 默认。
         /// </summary>
         private static int GetRoleOrder(Role role)
         {
@@ -288,11 +295,11 @@ namespace AutoEquipment
             {
                 case Role.Brawler:  return 0;
                 case Role.Shooter:  return 1;
-                case Role.Hunter:   return 2;
-                case Role.Leader:   return 3;
-                case Role.Doctor:   return 4;
-                case Role.Worker:   return 5;
-                case Role.Pacifist: return 6;
+                case Role.Doctor:   return 2;
+                case Role.Worker:   return 3;
+                case Role.Pacifist: return 4;
+                case Role.Hunter:   return 5;
+                case Role.Leader:   return 6;
                 default:            return 99;
             }
         }

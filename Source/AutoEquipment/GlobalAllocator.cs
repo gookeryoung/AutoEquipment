@@ -39,6 +39,8 @@ namespace AutoEquipment
         /// <summary>
         /// 全局重配：放下所有殖民者武器与护甲，按战斗价值降序重新分配。
         /// 返回被触发的殖民者数量。
+        /// 注意：本方法仅影响装备分配，不修改 pawn.playerSettings.displayOrder，
+        ///       即不改变殖民者栏顺序——玩家可放心使用，不会打乱已排好的头像顺序。
         /// </summary>
         public static int ReallocateAll()
         {

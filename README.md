@@ -270,8 +270,8 @@
 | 操作 | 效果 |
 |------|------|
 | 应用评级到名字 | 所有殖民者 Nick 变为 `S#王五` `A#李四` 格式，玩家一眼分辨评级 |
-| 应用评级到名字并按价值排序 | 加上前缀后，按战斗价值降序重排殖民者栏，高价值殖民者排在左侧便于快速选中 |
-| 应用评级到名字并按角色重排 | 加上前缀后，按角色分组重排殖民者栏：Brawler → Shooter → Hunter → 领袖 → Doctor → Worker → Pacifist，同角色内按战斗价值降序 |
+| 应用评级到名字并按价值排序 | 加上前缀后，按评级 S→A→B→C→D→X 从左到右排列，同档内按战斗价值降序 |
+| 应用评级到名字并按角色重排 | 加上前缀后，按角色分组重排殖民者栏：格斗者→射手→医生→工人→无暴力者→猎人→领袖，同角色内按评级降序 |
 
 **清除评级组**（用分隔线区分）：
 
@@ -281,18 +281,25 @@
 
 **覆盖范围**：殖民者 + 食尸鬼（Anomaly DLC）。食尸鬼也按相同规则评级，但不参与装备分配——玩家可一眼分辨其价值。排序仅作用于 `PawnsFinder.AllMaps_FreeColonists`（不含食尸鬼），通过 `pawn.playerSettings.displayOrder` 写入并 `Find.ColonistBar.MarkColonistsDirty()` 刷新。
 
+**按价值排序规则**（`ComparePawnByTierThenValueDesc`）：
+1. 先按 `CombatTier` 降序：S(5) > A(4) > B(3) > C(2) > D(1) > X(0)
+2. 同档内按 `ComputeCombatValue` 降序
+3. 设计意图：和平主义者（X 档）即使技能高也排在最右，避免挤占 S/A 档位置
+
 **角色排序优先级**（`SGSettings.GetRoleOrder`）：
 
 | 顺序 | 角色 | 说明 |
 |------|------|------|
 | 0 | Brawler | 前排格斗者 |
 | 1 | Shooter | 后排射手 |
-| 2 | Hunter | 狩猎者 |
-| 3 | Leader | 意识形态领袖 |
-| 4 | Doctor | 医生 |
-| 5 | Worker | 工人 |
-| 6 | Pacifist | 和平主义者 |
+| 2 | Doctor | 医生 |
+| 3 | Worker | 工人 |
+| 4 | Pacifist | 和平主义者 |
+| 5 | Hunter | 狩猎者 |
+| 6 | Leader | 意识形态领袖 |
 | 99 | Default | 未分类 |
+
+**全局装备重配不改变殖民者栏顺序**：`GlobalAllocator.ReallocateAll` 仅影响装备分配，不修改 `displayOrder`，玩家可放心使用。
 
 **防双重前缀**：
 - `SidearmAllocator.GetPawnLookupName` 会自动剥离 Nick 上的评级前缀返回纯净名，确保：
