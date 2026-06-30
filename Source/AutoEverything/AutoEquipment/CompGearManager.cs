@@ -92,7 +92,7 @@ namespace AutoEverything.AutoEquipment
             // 此处兜底处理：旧存档可能已注入 Comp，静默自移除避免 Tick 持续空转
             if (DLCCompat.IsGhoul(Pawn))
             {
-                if (parent.AllComps.Contains(this))
+                if (parent?.AllComps != null && parent.AllComps.Contains(this))
                     parent.AllComps.Remove(this);
                 return;
             }
@@ -121,9 +121,9 @@ namespace AutoEverything.AutoEquipment
                 return;
             }
 
-            // 奴隶不主动找武器装备：未征召时跳过所有自动评估
+            // 奴隶未征召时不主动找武器装备：跳过所有自动评估
             // 玩家手动给奴隶装备由玩家负责，MOD 不干预
-            // 征召时的副武器切换已在上方处理（奴隶无副武器本就跳过）
+            // 征召时的副武器切换已在上方 Drafted 分支处理（奴隶征召时允许切换）
             if (isSlave) return;
 
             if (tickOffset < 0)

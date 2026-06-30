@@ -103,12 +103,15 @@ namespace AutoEverything.Allocation
                 float bestScore = 0f;
                 int bestIdx = -1;
 
+                // 缓存 ArmorPreference 避免在内层循环重复调用 DetectRole（性能优化）
+                ArmorPreference armorPref = RoleDetector.GetArmorPreference(RoleDetector.DetectRole(pawn));
+
                 for (int j = 0; j < candidateBelts.Count; j++)
                 {
                     Thing b = candidateBelts[j];
                     if (b == null) continue;
 
-                    float score = ScoreBelt(pawn, b);
+                    float score = ScoreBelt(pawn, b, armorPref);
                     if (score > bestScore)
                     {
                         bestScore = score;
@@ -165,16 +168,16 @@ namespace AutoEverything.Allocation
         /// belt 评分：护盾腰带仅给重甲前排（Heavy），消防背包对所有纯近战角色可用。
         /// 设计意图：护盾腰带阻挡远程射击，自由后排（Flexible）需远程输出，不适用护盾；
         /// 重甲前排（Heavy=Brawler）以近战为主，护盾提供远程免疫最为契合。
+        /// 注：armorPref 由调用方缓存传入，避免内层循环重复调用 DetectRole。
         /// </summary>
-        private static float ScoreBelt(Pawn pawn, Thing belt)
+        private static float ScoreBelt(Pawn pawn, Thing belt, ArmorPreference armorPref)
         {
             float score = 0f;
 
             // 护盾腰带：仅重甲前排（Heavy）加分，Flexible/Light 不加分（0 分不入选）
             if (GearDefClassifier.IsShieldBelt(belt))
             {
-                ArmorPreference pref = RoleDetector.GetArmorPreference(RoleDetector.DetectRole(pawn));
-                if (pref == ArmorPreference.Heavy)
+                if (armorPref == ArmorPreference.Heavy)
                 {
                     score += 100f;
                 }

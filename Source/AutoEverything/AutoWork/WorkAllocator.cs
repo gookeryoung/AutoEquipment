@@ -25,6 +25,10 @@ namespace AutoEverything.AutoWork
         // 用于「同等兴趣下优先安排其他工作少的」均衡负载
         private static readonly Dictionary<Pawn, int> workCount = new Dictionary<Pawn, int>();
 
+        // 狩猎排序缓存：IsBackRow 结果预计算，避免 Sort 比较器内重复调用 DetectRole
+        // 每次狩猎分配前 Clear+重填，仅在该次 Sort 内有效
+        private static readonly Dictionary<Pawn, bool> backRowCache = new Dictionary<Pawn, bool>();
+
         // WorkTypeDef 缓存与分类（懒加载，避免静态字段初始化器跨线程调用 DefDatabase）
         private static List<WorkTypeDef> cachedWorkTypes;
         private static readonly List<WorkTypeDef> keyWorkDefs = new List<WorkTypeDef>();
@@ -260,6 +264,13 @@ namespace AutoEverything.AutoWork
             if (workCandidates.Count == 0) return;
 
             // 排序：后排优先 → passion desc → skill desc → workCount asc
+            // 预计算 IsBackRow 缓存，避免 Sort 比较器内重复调用 DetectRole（性能优化）
+            backRowCache.Clear();
+            for (int i = 0; i < workCandidates.Count; i++)
+            {
+                Pawn p = workCandidates[i];
+                backRowCache[p] = RoleDetector.IsBackRow(RoleDetector.DetectRole(p));
+            }
             workCandidates.Sort((a, b) => ComparePawnsForHunting(a, b, workType.relevantSkills));
 
             // top 2 → priority=2，其余有兴趣 → priority=4（备选），其余无兴趣 → priority=0（禁用）
@@ -288,12 +299,13 @@ namespace AutoEverything.AutoWork
         /// 狩猎专用比较器：在通用三因子排序前增加「后排优先」判定。
         /// 后排 = ArmorPreference.Flexible（Shooter/Hunter/Leader）。
         /// 设计意图：后排角色应优先承担狩猎以练习射击能力。
+        /// 注：IsBackRow 结果由调用方预计算存入 backRowCache，避免比较器内重复调用 DetectRole。
         /// </summary>
         private static int ComparePawnsForHunting(Pawn a, Pawn b, List<SkillDef> skills)
         {
-            // 后排优先（true 排前）
-            bool backA = RoleDetector.IsBackRow(RoleDetector.DetectRole(a));
-            bool backB = RoleDetector.IsBackRow(RoleDetector.DetectRole(b));
+            // 后排优先（true 排前），查表替代重复 DetectRole 调用
+            bool backA = backRowCache.TryGetValue(a, out bool ba) && ba;
+            bool backB = backRowCache.TryGetValue(b, out bool bb) && bb;
             if (backA != backB) return backB.CompareTo(backA);
 
             // 其余因子复用通用比较
@@ -485,6 +497,7 @@ namespace AutoEverything.AutoWork
         private static int GetMaxPassionForSkills(Pawn pawn, List<SkillDef> skills)
         {
             if (pawn?.skills == null) return 0;
+            if (skills == null || skills.Count == 0) return 0;
             int max = 0;
             for (int i = 0; i < skills.Count; i++)
             {
@@ -502,6 +515,7 @@ namespace AutoEverything.AutoWork
         private static bool HasPassionForAnySkill(Pawn pawn, List<SkillDef> skills)
         {
             if (pawn?.skills == null) return false;
+            if (skills == null || skills.Count == 0) return false;
             for (int i = 0; i < skills.Count; i++)
             {
                 SkillRecord sr = pawn.skills.GetSkill(skills[i]);
@@ -517,6 +531,7 @@ namespace AutoEverything.AutoWork
         private static float ComputeSkillScore(Pawn pawn, List<SkillDef> skills)
         {
             if (pawn?.skills == null) return 0f;
+            if (skills == null || skills.Count == 0) return 0f;
             float total = 0f;
             for (int i = 0; i < skills.Count; i++)
             {

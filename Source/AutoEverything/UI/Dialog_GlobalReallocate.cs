@@ -47,11 +47,14 @@ namespace AutoEverything.UI
         {
             // 顶部标题
             Text.Font = GameFont.Medium;
+            bool prevWrap = Text.WordWrap;
+            Text.WordWrap = false;
             Widgets.Label(new Rect(0f, 0f, inRect.width, 32f), "AE_ReallocRules_Title".Translate());
             Text.Font = GameFont.Small;
             GUI.color = new Color(0.7f, 0.7f, 0.7f);
             Text.Font = GameFont.Tiny;
             Widgets.Label(new Rect(0f, 32f, inRect.width, 20f), "AE_ReallocRules_ConfirmDesc".Translate());
+            Text.WordWrap = prevWrap;
             GUI.color = Color.white;
             Text.Font = GameFont.Small;
 

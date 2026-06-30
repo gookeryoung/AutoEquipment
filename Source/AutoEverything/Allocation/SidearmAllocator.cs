@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
@@ -134,6 +133,7 @@ namespace AutoEverything.Allocation
         /// <summary>
         /// 检查 Pawn 是否穿戴护盾腰带。
         /// 护盾腰带会阻挡远程武器射击，带护盾的 Pawn 不应配远程副武器。
+        /// 复用 GearDefClassifier.IsShieldBelt 保证与 WeaponTraitScorer 判定一致。
         /// </summary>
         private static bool IsWearingShieldBelt(Pawn pawn)
         {
@@ -141,12 +141,7 @@ namespace AutoEverything.Allocation
             List<Apparel> worn = pawn.apparel.WornApparel;
             for (int i = 0; i < worn.Count; i++)
             {
-                if (worn[i].def.apparel?.layers != null
-                    && worn[i].def.apparel.layers.Contains(ApparelLayerDefOf.Belt)
-                    && worn[i].def.defName.IndexOf("SHIELD", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    return true;
-                }
+                if (GearDefClassifier.IsShieldBelt(worn[i])) return true;
             }
             return false;
         }

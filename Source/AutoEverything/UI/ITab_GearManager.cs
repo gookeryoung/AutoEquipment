@@ -49,6 +49,9 @@ namespace AutoEverything.UI
 
         // ScrollView 滚动位置：static 保持位置，切换 Pawn 时不重置
         private static Vector2 scrollPos = Vector2.zero;
+        // ScrollView 内容高度：首帧用默认值，之后按上一帧实际绘制高度更新
+        // 避免硬编码高度导致新增内容时底部被裁剪
+        private static float cachedContentHeight = 590f;
 
         // ===================== 徽章图片缓存 =====================
         // 不能用静态字段初始化器调用 ContentFinder：ThingDef.ResolveReferences 在工作线程
@@ -170,8 +173,8 @@ namespace AutoEverything.UI
 
             // ===================== ScrollView 包裹内容区 =====================
             // 内部 inner rect 从 (0,0) 开始，宽度比 outer 少 16f 预留滚动条
-            float contentHeight = 590f;  // 预估高度并留余量（数值行增高+间距）
-            Rect innerRect = new Rect(0f, 0f, contentRect.width - 16f, contentHeight);
+            // 高度用上一帧实际绘制值，首帧用默认 590f，后续自适应内容增减
+            Rect innerRect = new Rect(0f, 0f, contentRect.width - 16f, cachedContentHeight);
             Widgets.BeginScrollView(contentRect, ref scrollPos, innerRect);
 
             Listing_Standard l = new Listing_Standard();
@@ -263,7 +266,10 @@ namespace AutoEverything.UI
             Rect tierCodeRect = l.GetRect(22f);
             GUI.color = ColorLabelGray;
             Text.Anchor = TextAnchor.MiddleLeft;
+            bool prevWrap = Text.WordWrap;
+            Text.WordWrap = false;
             Widgets.Label(tierCodeRect, "AE_ReallocRules_CurrentTier".Translate() + ": " + tierCode);
+            Text.WordWrap = prevWrap;
             Text.Anchor = TextAnchor.UpperLeft;
             GUI.color = Color.white;
             TooltipHandler.TipRegion(tierCodeRect, "AE_ReallocRules_CustomTier_Desc".Translate());
@@ -300,6 +306,8 @@ namespace AutoEverything.UI
             l.Gap(4f);
 
             l.End();
+            // 按实际绘制高度更新缓存，下一帧 ScrollView 使用正确高度避免裁剪
+            cachedContentHeight = l.CurHeight + 20f;
             Widgets.EndScrollView();
 
             // ===================== 底部按钮：全局人物评级 + 全局装备重配 =====================
@@ -389,8 +397,9 @@ namespace AutoEverything.UI
         /// 开始一个带标题与浅色背景的 Section 卡片。
         /// 配合 EndSection 使用：BeginSection 绘制标题与背景起始，EndSection 绘制底部分隔。
         /// 实现方式：在 Listing_Standard 流中插入一个标题行 + 留出内边距。
+        /// 注：参数 title 应为已翻译字符串，方法内不再重复 Translate。
         /// </summary>
-        private void BeginSection(Listing_Standard l, string titleKey)
+        private void BeginSection(Listing_Standard l, string title)
         {
             l.Gap(6f);
             // Section 标题行：浅色文字 + 半透明背景
@@ -400,8 +409,11 @@ namespace AutoEverything.UI
             Text.Anchor = TextAnchor.MiddleLeft;
             Text.Font = GameFont.Small;
             // 左侧缩进 6f 让标题不紧贴边框
+            bool prevWrap = Text.WordWrap;
+            Text.WordWrap = false;
             Widgets.Label(new Rect(titleRect.x + 6f, titleRect.y, titleRect.width - 6f, titleRect.height),
-                "• " + titleKey.Translate());
+                "• " + title);
+            Text.WordWrap = prevWrap;
             Text.Anchor = TextAnchor.UpperLeft;
             GUI.color = Color.white;
             l.Gap(2f);
@@ -493,10 +505,12 @@ namespace AutoEverything.UI
             // 2. 情境徽章 + Tooltip（触发条件）
             // 食尸鬼强制显示"闲置"：其 CurJob 可能是等待类，ContextDetector 已返回 Normal，
             // 但 Normal 翻译"日常"对食尸鬼有误导，"闲置"更准确
+            // 食尸鬼 Tooltip 同步使用闲置说明，避免徽章与提示不一致
             Rect ctxRect = new Rect(x, y, badgeWidth, h);
             string ctxText = isGhoul ? "AE_Context_Idle".Translate() : ("AE_Context_" + context).Translate();
             DrawBadge(ctxRect, ctxText, GetContextColor(context));
-            TooltipHandler.TipRegion(ctxRect, ("AE_TT_Context_" + context).Translate());
+            string ctxTip = isGhoul ? "AE_TT_Context_Idle".Translate() : ("AE_TT_Context_" + context).Translate();
+            TooltipHandler.TipRegion(ctxRect, ctxTip);
             x += badgeWidth + gap;
 
             // 3. 评级徽章 + Tooltip（计算来源）

@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using RimWorld;
 using Verse;
 using AutoEverything.RoleEvaluation;
 using AutoEverything.Allocation;
@@ -26,13 +27,17 @@ namespace AutoEverything.AutoEquipment
         }
 
         /// <summary>
-        /// 护盾腰带判定：通过 defName 启发式识别。
-        /// 覆盖原生护盾腰带及 MOD 扩展的护盾类附件。
+        /// 护盾腰带判定：defName 含 "SHIELD" 且位于 Belt 层。
+        /// 双重校验避免误判护盾头盔等非腰带护盾附件，
+        /// 统一 WeaponTraitScorer 与 SidearmAllocator 的判定逻辑。
         /// </summary>
         public static bool IsShieldBelt(Thing thing)
         {
-            return thing?.def != null
-                && thing.def.defName.IndexOf("SHIELD", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (thing?.def == null) return false;
+            if (thing.def.defName.IndexOf("SHIELD", StringComparison.OrdinalIgnoreCase) < 0) return false;
+            // 必须位于 Belt 层，排除护盾头盔/护盾背心等非腰带护盾
+            return thing.def.apparel?.layers != null
+                && thing.def.apparel.layers.Contains(ApparelLayerDefOf.Belt);
         }
 
         /// <summary>

@@ -199,6 +199,7 @@ By Combat Value: pure combat value desc, ignoring tier (high-skill pacifists may
   <AE_TT_Role_Leader>Ideo Leader: has ideology role (label only)</AE_TT_Role_Leader>
   <AE_TT_Context_Normal>Normal: no special context</AE_TT_Context_Normal>
   <AE_Context_Idle>Idle</AE_Context_Idle>
+  <AE_TT_Context_Idle>Idle: ghoul does not participate in context detection</AE_TT_Context_Idle>
   <AE_TT_Context_Combat>Combat: drafted or fleeing</AE_TT_Context_Combat>
   <AE_TT_Context_Work>Working: performing non-combat job</AE_TT_Context_Work>
   <AE_TT_Context_Hunting>Hunting: performing hunting job</AE_TT_Context_Hunting>

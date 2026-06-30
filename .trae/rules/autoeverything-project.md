@@ -148,7 +148,7 @@
 
 ## ITab 面板布局
 
-- 面板尺寸 `360f × 560f`，内容区用 ScrollView 包裹（inner rect 宽度比 outer 少 16f）
+- 面板尺寸 `360f × 600f`（高度增加以容纳第三个按钮：全局工作重配），内容区用 ScrollView 包裹（inner rect 宽度比 outer 少 16f）
 - 缓存周期 60 tick：角色/情境/评级/数值摘要避免每帧重算
 - 徽章行 4 列等宽：角色 / 情境 / 评级 / 护甲偏好（食尸鬼用"食尸鬼"徽章替代护甲偏好）
 - **文字防换行强制**：所有 `Widgets.Label` 绘制前 `Text.WordWrap = false`，绘制后恢复

@@ -199,6 +199,7 @@
   <AE_TT_Role_Leader>意识形态领袖：拥有意识形态角色（仅标签）</AE_TT_Role_Leader>
   <AE_TT_Context_Normal>日常：无特殊情境</AE_TT_Context_Normal>
   <AE_Context_Idle>闲置</AE_Context_Idle>
+  <AE_TT_Context_Idle>闲置：食尸鬼不参与情境判定</AE_TT_Context_Idle>
   <AE_TT_Context_Combat>战斗：已征召或正在逃跑</AE_TT_Context_Combat>
   <AE_TT_Context_Work>工作中：当前正在执行非战斗工作</AE_TT_Context_Work>
   <AE_TT_Context_Hunting>狩猎中：正在执行狩猎工作</AE_TT_Context_Hunting>
