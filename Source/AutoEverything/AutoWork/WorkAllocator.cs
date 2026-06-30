@@ -348,7 +348,8 @@ namespace AutoEverything.AutoWork
         // 第 5 遍：其他技能工作（Cooking/Growing/Mining/Crafting 等）
         //   - 候选排序：passion desc → skill desc → workCount asc
         //   - guarantee 2：top 2 内有火 → priority=2，无火 → priority=3
-        //   - 其余 → priority=0（禁用，不备选）
+        //   - top 2 外的有火者优先承担（priority=3）
+        //   - 其余 → 技能兜底（≥8→3，否则 0）
         // ════════════════════════════════════════════════════════════
 
         private static void AssignOtherSkillWorkPriorities()
@@ -386,7 +387,16 @@ namespace AutoEverything.AutoWork
                 }
                 else
                 {
-                    priority = GetSkillFloorPriority(pawn, workType.relevantSkills);
+                    // top 2 外的有火者优先承担（priority=3）
+                    if (HasPassionForAnySkill(pawn, workType.relevantSkills))
+                    {
+                        priority = 3;
+                    }
+                    // top 2 外的无火者技能兜底（≥8→3，否则 0）
+                    else
+                    {
+                        priority = GetSkillFloorPriority(pawn, workType.relevantSkills);
+                    }
                 }
                 pawn.workSettings.SetPriority(workType, priority);
                 if (priority <= 2) workCount[pawn]++;
