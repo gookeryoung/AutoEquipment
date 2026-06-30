@@ -1,6 +1,8 @@
-﻿using RimWorld;
+﻿using System.Collections.Generic;
+using RimWorld;
 using Verse;
 using AutoEverything.RoleEvaluation;
+using AutoEverything.AutoEquipment;
 
 namespace AutoEverything.AutoEquipment.Scoring.Weapon
 {
@@ -29,6 +31,15 @@ namespace AutoEverything.AutoEquipment.Scoring.Weapon
 
             bool isMelee = gear.def.IsMeleeWeapon;
             bool isRanged = gear.def.IsRangedWeapon;
+
+            // 护盾腰带：拒绝远程武器（护盾会阻挡所有远程射击，远程武器无效）
+            // 设计意图：带护盾腰带的角色只能近战，远程武器对持盾者完全无用
+            if (isRanged && IsWearingShieldBelt(pawn))
+            {
+                breakdown.Veto(-9000f);
+                breakdown.AddScore(Name, "护盾腰带+远程=拒绝", -9000f);
+                return;
+            }
 
             // 格斗者特质（TraitDefOf.Brawler 始终存在）：绝对拒绝远程武器
             // 仅真正的 Brawler 特质才拒绝远程，技能型 Brawler（基于技能判定，无特质）不拒绝
@@ -98,6 +109,19 @@ namespace AutoEverything.AutoEquipment.Scoring.Weapon
                         breakdown.AddScore(Name, "冷枪手+短冷却(厌恶)", -20f);
                 }
             }
+        }
+
+        // 检查 Pawn 是否穿戴护盾腰带（用 GearDefClassifier.IsShieldBelt 遍历 apparel）
+        // 与 SidearmAllocator.IsWearingShieldBelt 逻辑一致，此处不引入跨命名空间依赖
+        private static bool IsWearingShieldBelt(Pawn pawn)
+        {
+            if (pawn.apparel?.WornApparel == null) return false;
+            List<Apparel> worn = pawn.apparel.WornApparel;
+            for (int i = 0; i < worn.Count; i++)
+            {
+                if (GearDefClassifier.IsShieldBelt(worn[i])) return true;
+            }
+            return false;
         }
     }
 }

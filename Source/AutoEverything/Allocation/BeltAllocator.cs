@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -162,20 +162,26 @@ namespace AutoEverything.Allocation
         }
 
         /// <summary>
-        /// belt 评分：护盾腰带优先（近战防护），消防背包次之。
-        /// 纯近战角色贴身作战，护盾提供远程免疫，消防背包应对火灾。
+        /// belt 评分：护盾腰带仅给重甲前排（Heavy），消防背包对所有纯近战角色可用。
+        /// 设计意图：护盾腰带阻挡远程射击，自由后排（Flexible）需远程输出，不适用护盾；
+        /// 重甲前排（Heavy=Brawler）以近战为主，护盾提供远程免疫最为契合。
         /// </summary>
         private static float ScoreBelt(Pawn pawn, Thing belt)
         {
             float score = 0f;
 
-            // 护盾腰带：提供远程免疫，近战角色最需
+            // 护盾腰带：仅重甲前排（Heavy）加分，Flexible/Light 不加分（0 分不入选）
             if (GearDefClassifier.IsShieldBelt(belt))
             {
-                score += 100f;
+                ArmorPreference pref = RoleDetector.GetArmorPreference(RoleDetector.DetectRole(pawn));
+                if (pref == ArmorPreference.Heavy)
+                {
+                    score += 100f;
+                }
+                // Flexible/Light：0 分，护盾腰带不会分配给后排/工人
             }
 
-            // 消防背包：应对火灾/机械族，次选
+            // 消防背包：应对火灾/机械族，所有纯近战角色可用
             if (GearDefClassifier.IsFirefoamPack(belt))
             {
                 score += 60f;
