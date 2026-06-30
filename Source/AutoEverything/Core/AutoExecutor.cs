@@ -244,29 +244,29 @@ namespace AutoEverything.Core
         }
 
         /// <summary>
-        /// 执行高价值星标标记：调用 PawnMarker.ApplyMarkers()。
-        /// 受 AESettings.autoMarkPawn 开关控制，关闭时不执行（清除由 ITab 勾选变化处理）。
-        /// try-catch 隔离：失败时 Log.ErrorOnce 记录，不影响其他逻辑。
+        /// 高价值非殖民者星标：头顶图标由 Harmony 补丁实时绘制，此处仅用于消息提示。
+        /// 周期路径（showMessage=false）直接返回，避免扫描所有地图 Pawn 的开销。
+        /// ITab 勾选时（showMessage=true）统计当前非殖民者高价值对象数量并弹消息。
         /// </summary>
         private static void ExecuteMark(int tick, bool showMessage)
         {
             lastMarkTick = tick;
             if (!AESettings.autoMarkPawn) return;
 
+            // 头顶图标由 Harmony 补丁实时绘制，周期路径无需重复执行
+            if (!showMessage) return;
+
             try
             {
-                int n = PawnMarker.ApplyMarkers();
-                AEDebug.Log(() => $"[AutoExecutor] 高价值星标: {n} 个殖民者 (tick={tick})");
-                if (showMessage)
-                {
-                    Messages.Message(
-                        "AE_AutoMarkPawnResult".Translate(n),
-                        MessageTypeDefOf.TaskCompletion);
-                }
+                int n = PawnMarker.CountMarkablePawns();
+                AEDebug.Log(() => $"[AutoExecutor] 高价值非殖民者标记: {n} 个对象 (tick={tick})");
+                Messages.Message(
+                    "AE_AutoMarkPawnResult".Translate(n),
+                    MessageTypeDefOf.TaskCompletion);
             }
             catch (Exception ex)
             {
-                Log.ErrorOnce("[AutoEverything] 高价值星标失败: " + ex.Message, MarkErrorSalt);
+                Log.ErrorOnce("[AutoEverything] 高价值星标统计失败: " + ex.Message, MarkErrorSalt);
             }
         }
     }

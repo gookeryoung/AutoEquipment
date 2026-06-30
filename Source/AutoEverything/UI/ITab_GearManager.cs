@@ -7,7 +7,6 @@ using AutoEverything.RoleEvaluation;
 using AutoEverything.AutoEquipment;
 using AutoEverything.AutoEquipment.Scoring;
 using AutoEverything.Allocation;
-using AutoEverything.AutoMarkPawn;
 
 namespace AutoEverything.UI
 {
@@ -387,7 +386,7 @@ namespace AutoEverything.UI
                 AutoExecutor.TriggerGearNow();
             }
 
-            // 4. 高价值星标勾选框：勾选立即执行 + 启用周期自动；取消勾选清除所有星标
+            // 4. 高价值非殖民者星标勾选框：勾选时统计+消息提示；取消勾选时头顶图标由 Harmony 补丁实时停止绘制
             Rect markCheckRect = new Rect(
                 rect.x,
                 gearCheckRect.yMax + buttonGap,
@@ -400,20 +399,10 @@ namespace AutoEverything.UI
             Widgets.CheckboxLabeled(markCheckRect, "AE_AutoMarkPawn".Translate(), ref AESettings.autoMarkPawn);
             Text.WordWrap = prevWrap4;
             TooltipHandler.TipRegion(markCheckRect, "AE_TT_AutoMarkPawn".Translate());
-            // 状态变化检测：勾选时立即执行；取消勾选时清除所有星标
-            if (AESettings.autoMarkPawn != prevMark)
+            // 状态变化：勾选时统计当前高价值非殖民者并弹消息；取消勾选时头顶图标自动消失（补丁实时检查开关）
+            if (AESettings.autoMarkPawn != prevMark && AESettings.autoMarkPawn)
             {
-                if (AESettings.autoMarkPawn)
-                {
-                    AutoExecutor.TriggerMarkNow();
-                }
-                else
-                {
-                    int cleared = PawnMarker.ClearMarkers();
-                    Messages.Message(
-                        "AE_AutoMarkPawnCleared".Translate(cleared),
-                        MessageTypeDefOf.TaskCompletion);
-                }
+                AutoExecutor.TriggerMarkNow();
             }
 
             // 5. 全局装备重配按钮（保留原逻辑，打开 Dialog_GlobalReallocate）

@@ -7,24 +7,28 @@ using AutoEverything.RoleEvaluation;
 namespace AutoEverything.AutoMarkPawn
 {
     /// <summary>
-    /// 高价值殖民者自动标记模块：为 S+ 档次殖民者 Nick 追加鲜艳红色星标 "★"。
+    /// 高价值非殖民者标记模块：为 S+ 档次的访客、敌人、交易者、野生人类等
+    /// 在头顶实时绘制鲜艳红色星标 "★"。
     ///
     /// 设计目的：
-    /// - 玩家一眼可辨高价值殖民者（S/SS/SSS 档），便于重点保护与培养
-    /// - 星标追加在评级前缀之后（如 "S#王五★"），与评级标签系统协同
-    /// - 自定义评级覆盖也生效：玩家指定 S 档的殖民者同样标记
+    /// - 玩家一眼可辨高价值非殖民者（S/SS/SSS 档），便于优先俘虏、招募或警惕
+    /// - 不修改任何 Pawn 的 Nick/Name，避免影响派系交互界面、交易显示、战斗通知
+    /// - 视觉标记纯前端绘制（Harmony Postfix），安全可逆，无存档副作用
     ///
-    /// 与评级标签系统的关系：
-    /// - 评级标签（autoTierTag）：管理 "S#" 前缀
-    /// - 高价值标记（autoMarkPawn）：管理 "★" 后缀
-    /// - 两者独立开关，互不依赖
-    /// - TierTagHelper.Strip 同时剥离前缀与星标，保证自定义评级查询命中
-    /// - ApplyTierTagsToAllPawns 会保留已有星标，避免同一 tick 内 Name 重复设置
+    /// 标记范围（非殖民者人类）：
+    /// - 敌对派系敌人（来袭突袭/袭营的敌方 Pawn）
+    /// - 友好派系访客（来访的 Visitor）
+    /// - 交易者（派系/轨道交易商）
+    /// - 野生人类/难民/流浪者
     ///
-    /// 触发方式（与 AutoExecutor 一致）：
-    /// - 周期触发：每 3000 tick（约 50 秒）
-    /// - 新增殖民者：殖民者数量增加时立即触发
-    /// - ITab 勾选：玩家勾选时立即触发
+    /// 视觉实现：
+    /// - HarmonyPatches.PawnUIOverlay_DrawPawnGUIOverlay_Patch 在 DrawPawnGUIOverlay Postfix 中绘制
+    /// - 头顶位置：pawn.DrawPos 上方，世界坐标转屏幕坐标
+    /// - 颜色：Color(1.0f, 0.15f, 0.15f) 鲜艳红色
+    ///
+    /// 触发方式：
+    /// - 实时绘制：Harmony 补丁每帧调用（DrawPawnGUIOverlay 由游戏每帧触发）
+    /// - 消息提示：ITab 勾选时统计当前非殖民者高价值对象数量并弹消息
     /// </summary>
     public static class PawnMarker
     {
@@ -39,97 +43,42 @@ namespace AutoEverything.AutoMarkPawn
         }
 
         /// <summary>
-        /// 为所有玩家殖民者（含食尸鬼）应用星标：
-        /// - S+ 档次且 autoMarkPawn 开启 → Nick 追加 "★"
-        /// - 非 S+ 或 autoMarkPawn 关闭 → 剥离已有 "★"
-        /// 返回当前标记的高价值殖民者数量（供消息提示用）。
+        /// 判断 Pawn 是否为可标记的非殖民者对象：
+        /// - 已生成在地图上（Spawned）
+        /// - 未死亡（Dead）
+        /// - 非玩家阵营（Faction != OfPlayer），涵盖敌人/访客/交易者/野生人类
+        /// - 人类like 种族（CanManageGear），排除动物/机械族/昆虫
         ///
-        /// 覆盖范围与 AESettings.ApplyTierTagsToAllPawns 一致：殖民者 + 食尸鬼。
-        /// 食尸鬼也标记以供玩家参考其价值。
+        /// 倒下（Downed）的 Pawn 仍标记：便于玩家优先俘虏高价值敌人。
+        /// 食尸鬼不排除：非殖民者食尸鬼也按评级标记供玩家参考。
         /// </summary>
-        public static int ApplyMarkers()
+        public static bool IsMarkableTarget(Pawn pawn)
         {
-            if (!AESettings.autoMarkPawn)
-            {
-                // 开关关闭时清除所有星标
-                ClearMarkers();
-                return 0;
-            }
-
-            int marked = 0;
-            foreach (Pawn pawn in CollectMarkablePawns())
-            {
-                if (!PawnSuitabilityChecker.CanManageGear(pawn)) continue;
-
-                NameTriple nt = pawn.Name as NameTriple;
-                if (nt == null) continue;
-
-                string currentNick = nt.Nick ?? string.Empty;
-                // 剥离已有星标得到基础 Nick（保留评级前缀）
-                string baseNick = TierTagHelper.StripStar(currentNick);
-
-                bool shouldMark = IsHighValue(pawn);
-                string newNick = shouldMark
-                    ? baseNick + TierTagHelper.StarMarker
-                    : baseNick;
-
-                if (newNick != currentNick)
-                {
-                    pawn.Name = new NameTriple(nt.First, newNick, nt.Last);
-                }
-
-                if (shouldMark) marked++;
-            }
-            return marked;
+            if (pawn == null) return false;
+            if (!pawn.Spawned) return false;
+            if (pawn.Dead) return false;
+            if (pawn.Faction == Faction.OfPlayer) return false;
+            if (!PawnSuitabilityChecker.CanManageGear(pawn)) return false;
+            return true;
         }
 
         /// <summary>
-        /// 清除所有殖民者（含食尸鬼）Nick 上的星标后缀。
-        /// 仅剥离尾部 "★"，保留评级前缀与其他字符。
-        /// 在 autoMarkPawn 取消勾选时调用。
+        /// 统计当前所有地图上非殖民者高价值对象数量。
+        /// 供 ITab 勾选时消息提示用，周期路径不调用（避免扫描开销）。
         /// </summary>
-        public static int ClearMarkers()
+        public static int CountMarkablePawns()
         {
-            int touched = 0;
-            foreach (Pawn pawn in CollectMarkablePawns())
-            {
-                NameTriple nt = pawn.Name as NameTriple;
-                if (nt == null) continue;
-
-                string currentNick = nt.Nick ?? string.Empty;
-                if (!TierTagHelper.HasStar(currentNick)) continue;
-
-                string cleanNick = TierTagHelper.StripStar(currentNick);
-                pawn.Name = new NameTriple(nt.First, cleanNick, nt.Last);
-                touched++;
-            }
-            return touched;
-        }
-
-        /// <summary>
-        /// 收集需要标记的 Pawn：殖民者 + 食尸鬼。
-        /// 与 AESettings.ApplyTierTagsToAllPawns 收集逻辑一致，保证覆盖范围相同。
-        /// </summary>
-        private static List<Pawn> CollectMarkablePawns()
-        {
-            var pawns = new List<Pawn>();
-            foreach (Pawn pawn in PawnsFinder.AllMaps_FreeColonists)
-            {
-                if (pawn != null) pawns.Add(pawn);
-            }
-            // 食尸鬼也加入标记范围（仅标记，不分配装备）
+            int count = 0;
             foreach (Map map in Find.Maps)
             {
                 if (map == null) continue;
-                foreach (Pawn pawn in map.mapPawns.AllPawns)
+                foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned)
                 {
-                    if (pawn == null) continue;
-                    if (!DLCCompat.IsGhoul(pawn)) continue;
-                    if (pawn.Faction == null || !pawn.Faction.IsPlayer) continue;
-                    pawns.Add(pawn);
+                    if (!IsMarkableTarget(pawn)) continue;
+                    if (IsHighValue(pawn)) count++;
                 }
             }
-            return pawns;
+            return count;
         }
     }
 }

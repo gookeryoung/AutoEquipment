@@ -34,7 +34,7 @@
 - **AutoEquipment**：装备评分系统（`CompGearManager` Tick 入口、`GearScorer` 门面、`GearDefClassifier` 装备分类、`Scoring/` 评分管线与各 Scorer）
 - **Allocation**：全局分配策略（`GlobalAllocator`、`SidearmAllocator`、`BeltAllocator`、`PawnCombatProfile`）
 - **AutoWork**：自动工作优先级分配（`WorkAllocator`）
-- **AutoMarkPawn**：高价值殖民者标记（S+ 档次星标追加到 Nick、殖民者栏红色星标覆盖图）
+- **AutoMarkPawn**：高价值非殖民者标记（S+ 档次头顶红色星标实时绘制，不修改 Pawn 数据）
 - **UI**：玩家界面（`ITab_GearManager`、`Dialog_GlobalReallocate`、`PresetDetailsWindow`）
 
 未来扩展（自动药物/自动食物等）应在 `Source/AutoEverything/` 下新增独立模块文件夹，按上述命名空间约定扩展。
@@ -163,5 +163,5 @@
   - 人员自动评级（`autoTierTag`）
   - 工作自动配置（`autoWorkEnabled`）
   - 装备自动重配（`autoGearEnabled`）
-  - 高价值星标（`autoMarkPawn`）
+  - 高价值标记（`autoMarkPawn`）
   - 全局装备重配按钮（占满宽度）

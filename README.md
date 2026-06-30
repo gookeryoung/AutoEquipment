@@ -477,11 +477,11 @@ Passion 量化：None=0, Minor=1, Major=2。
 
 ## 自动执行（AutoExecutor）
 
-`Core/AutoExecutor.cs` 静态类负责工作重配、人员评级、装备重配与高价值星标的周期/新增殖民者自动触发。
+`Core/AutoExecutor.cs` 静态类负责工作重配、人员评级、装备重配的周期/新增殖民者自动触发，以及高价值非殖民者标记的 ITab 勾选消息提示。
 
 - **入口**：由 `CompGearManager.CompTick` 每 tick 调用 `AutoExecutor.TryTick()`
 - **静态门控**：每 60 tick 检查一次殖民者数量变化与周期触发
-- **周期触发**：每 3000 tick（约 50 秒）执行一次工作重配、人员评级、装备重配与高价值星标
+- **周期触发**：每 3000 tick（约 50 秒）执行一次工作重配、人员评级、装备重配（高价值标记为实时绘制，无周期执行）
 - **新增殖民者检测**：`PawnsFinder.AllMaps_FreeColonists.Count` 增加 → 立即触发（不弹消息框）
 - **首次初始化守卫**：`lastWorkTick`/`lastTierTick`/`lastGearTick`/`lastMarkTick` < 0 时设为当前 tick 不触发，避免存档加载误触发
 - **错误隔离**：工作、评级、装备重配、星标各自独立 try-catch + `Log.ErrorOnce`，salt 独立（Work=0xA200 / Tier=0xA300 / Gear=0xA400 / Mark=0xA500）
@@ -497,26 +497,30 @@ Passion 量化：None=0, Minor=1, Major=2。
 - **不放下当前装备**：与手动"全局重配"不同，自动重配不放下装备到地上，仅评估是否有更优装备可换
 - **入口**：殖民者装备面板（ITab）底部 → "装备自动重配"勾选框（`AESettings.autoGearReallocate`，默认勾选）
 
-### 高价值殖民者星标（AutoMarkPawn）
+### 高价值非殖民者标记（AutoMarkPawn）
 
-`AutoMarkPawn/PawnMarker.cs` 静态类为 S+ 档次殖民者（S/SS/SSS，含自定义评级覆盖）Nick 追加鲜艳红色星标 `★`，并在殖民者栏右上角绘制红色星标覆盖图。
+`AutoMarkPawn/PawnMarker.cs` 静态类为 S+ 档次非殖民者人类（S/SS/SSS，含自定义评级覆盖）头顶实时绘制鲜艳红色星标 `★`，便于玩家一眼识别高价值目标，优先俘虏或警惕。
 
 - **判定**：`CombatEvaluator.GetCombatTier(pawn) >= CombatTier.S`（含自定义评级覆盖）
+- **标记范围**（非殖民者人类，`PawnMarker.IsMarkableTarget`）：
+  - 敌对派系敌人（来袭突袭/袭营的敌方 Pawn）
+  - 友好派系访客（来访的 Visitor）
+  - 交易者（派系/轨道交易商）
+  - 野生人类/难民/流浪者
+  - 倒下（Downed）的仍标记：便于优先俘虏高价值敌人
+  - 殖民者与食尸鬼不标记
 - **标记方式**：
-  - Nick 追加 `★` 后缀（如 `S#王五★`），与评级前缀协同显示
-  - 殖民者栏右上角红色星标覆盖图（Harmony Postfix on `ColonistBar.DrawColonist`）
-  - 消息提示中包含星标符号（`AE_AutoMarkPawnResult`）
-- **触发**：周期 3000 tick + 新增殖民者立即触发 + ITab 勾选时立即触发
-- **覆盖范围**：殖民者 + 食尸鬼（与评级标签一致，食尸鬼也标记供玩家参考）
-- **与评级标签的关系**：
-  - 评级标签（`autoTierTag`）管理 `S#` 前缀
-  - 高价值星标（`autoMarkPawn`）管理 `★` 后缀
-  - 两者独立开关，互不依赖
-  - `TierTagHelper.Strip` 同时剥离前缀与星标，保证自定义评级查询命中
-  - `ApplyTierTagsToAllPawns` 会保留已有星标，避免同一 tick 内 Name 重复设置
-- **取消勾选**：清除所有殖民者（含食尸鬼）Nick 上的 `★` 后缀，保留评级前缀
-- **Harmony 补丁降级**：`ColonistBar.DrawColonist` 方法缺失时仅 `Log.Warning`，星标仍显示在名字后缀中
-- **入口**：殖民者装备面板（ITab）底部 → "高价值星标"勾选框（`AESettings.autoMarkPawn`，默认勾选）
+  - 头顶世界图标：Harmony Postfix on `PawnUIOverlay.DrawPawnGUIOverlay`
+  - 世界坐标 `pawn.DrawPos` 上方约 1.8 格 → 屏幕坐标 → GUI 坐标（Y 轴翻转）
+  - 颜色 `Color(1.0f, 0.15f, 0.15f)` 鲜艳红色，`GameFont.Medium` 字号
+  - 不修改任何 Pawn 的 Nick/Name，纯前端绘制，安全可逆，无存档副作用
+- **触发**：
+  - 实时绘制：Harmony 补丁每帧调用（`DrawPawnGUIOverlay` 由游戏每帧触发）
+  - ITab 勾选时：统计当前非殖民者高价值对象数量并弹消息提示
+  - 周期路径不执行（无 Nick 修改，无需周期刷新）
+- **取消勾选**：头顶图标由 Harmony 补丁实时检查 `AESettings.autoMarkPawn` 开关，自动停止绘制
+- **Harmony 补丁降级**：`PawnUIOverlay` 类型或 `DrawPawnGUIOverlay` 方法缺失时仅 `Log.Warning`，星标不显示但不崩溃
+- **入口**：殖民者装备面板（ITab）底部 → "高价值标记"勾选框（`AESettings.autoMarkPawn`，默认勾选）
 
 ## 架构模型
 
@@ -573,7 +577,7 @@ Source/AutoEverything/
 │   ├── BeltAllocator.cs                   # 腰带附件全局分配（护盾腰带/消防背包）
 │   └── PawnCombatProfile.cs               # Pawn 战斗画像（技能/特质/兴趣聚合）
 ├── AutoMarkPawn/                          # → namespace AutoEverything.AutoMarkPawn
-│   └── PawnMarker.cs                      # 高价值殖民者星标（S+ 追加 ★ + 殖民者栏红色覆盖图）
+│   └── PawnMarker.cs                      # 高价值非殖民者标记（S+ 头顶红色星标实时绘制）
 └── UI/                                    # → namespace AutoEverything.UI
     ├── ITab_GearManager.cs                # 装备管理面板
     ├── Dialog_GlobalReallocate.cs         # 全局重配规则对话框
@@ -585,7 +589,7 @@ Source/AutoEverything/
 - **RoleEvaluation**：角色与情境评价（角色检测、情境检测、战斗价值评估、状态清理）
 - **AutoEquipment**：装备评分系统（CompTick 协调、评分门面、装备分类、评分管线与各 Scorer）
 - **Allocation**：全局分配策略（全局重配、副武器、腰带附件、Pawn 战斗画像）
-- **AutoMarkPawn**：高价值殖民者标记（S+ 档次星标追加、殖民者栏红色覆盖图）
+- **AutoMarkPawn**：高价值非殖民者标记（S+ 档次头顶红色星标实时绘制）
 - **UI**：玩家界面（ITab 面板、对话框、预设详情窗口）
 
 未来扩展（自动药物/自动食物等）可在 `Source/AutoEverything/` 下新增独立模块文件夹，按上述命名空间约定扩展。
@@ -602,7 +606,7 @@ Source/AutoEverything/
 | `AutoExecutor` 工作重配 | 3000 tick | 周期 + 新增殖民者 + ITab 勾选时触发 |
 | `AutoExecutor` 人员评级 | 3000 tick | 周期 + 新增殖民者 + ITab 勾选时触发 |
 | `AutoExecutor` 装备重配 | 3000 tick | 轻量升级检查（ForceEvaluate），不放下当前装备；周期 + 新增殖民者 + ITab 勾选时触发 |
-| `AutoExecutor` 高价值星标 | 3000 tick | S+ 档次殖民者 Nick 追加 `★` + 殖民者栏红色星标覆盖图；周期 + 新增殖民者 + ITab 勾选时触发 |
+| `AutoExecutor` 高价值标记 | 实时（Harmony 补丁） | S+ 档次非殖民者人类头顶绘制红色星标；ITab 勾选时统计数量弹消息，取消勾选自动停止绘制 |
 | 角色缓存 | `RoleCacheInterval`（2500 tick） | 避免每 tick 重复检测 |
 | 检视面板缓存 | 60 tick | ITab 角色徽章/数值摘要刷新 |
 | 死亡 Pawn 字典清理 | 60000 tick | `RoleDetector`/`ContextDetector` 残留条目清理 |
@@ -740,7 +744,7 @@ make rebuild-check  # 完整重建后检查
 | `GlobalAllocator.cs` 护甲匹配奖励 | `### 护甲分配算法（重甲单位优先）` 表格 |
 | `AutoExecutor.cs` | `## 自动执行（AutoExecutor）` + `### 评估周期` 表格 |
 | `WorkAllocator.cs` 奴隶收集/狩猎限制 | `## 奴隶处理` + `## 自动工作分配（AutoWork）` 狩猎条目 |
-| `PawnMarker.cs` / `AutoMarkPawn` 模块 | `### 高价值殖民者星标（AutoMarkPawn）` |
+| `PawnMarker.cs` / `AutoMarkPawn` 模块 | `### 高价值非殖民者标记（AutoMarkPawn）` |
 | `ITab_GearManager.cs` 底部勾选框 | `## 自动执行（AutoExecutor）` 入口章节 |
 | `SGSettings.cs` 排序相关 | `### 殖民者栏默认排序` 表格 |
 | 新增/删除源文件 | `### 目录结构` 代码块 |

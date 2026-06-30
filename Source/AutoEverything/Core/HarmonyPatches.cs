@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using UnityEngine;
@@ -31,25 +32,34 @@ namespace AutoEverything.Core
             harmony.Patch(
                 AccessTools.Method(typeof(Pawn_DraftController), "set_Drafted"),
                 postfix: new HarmonyMethod(typeof(DraftController_SetDrafted_Patch), nameof(DraftController_SetDrafted_Patch.Postfix)));
-            // ColonistBar.DrawColonist 补丁：在殖民者栏为 S+ 殖民者绘制红色星标覆盖
-            // 方法可能因 RimWorld 版本差异不存在，用 try-catch 降级（星标仍显示在名字中）
+            // PawnUIOverlay.DrawPawnGUIOverlay 补丁：在非殖民者高价值 Pawn 头顶绘制红色星标
+            // 类型/方法名可能因 RimWorld 版本差异变化，用 try-catch + null 检查降级
             try
             {
-                var drawMethod = AccessTools.Method("RimWorld.ColonistBar:DrawColonist");
-                if (drawMethod != null)
+                var overlayType = AccessTools.TypeByName("RimWorld.PawnUIOverlay");
+                if (overlayType != null)
                 {
-                    harmony.Patch(drawMethod,
-                        postfix: new HarmonyMethod(typeof(ColonistBar_DrawColonist_Patch),
-                            nameof(ColonistBar_DrawColonist_Patch.Postfix)));
+                    pawnUIOverlayPawnField = AccessTools.Field(overlayType, "pawn");
+                    var drawMethod = AccessTools.Method(overlayType, "DrawPawnGUIOverlay");
+                    if (drawMethod != null)
+                    {
+                        harmony.Patch(drawMethod,
+                            postfix: new HarmonyMethod(typeof(PawnUIOverlay_DrawPawnGUIOverlay_Patch),
+                                nameof(PawnUIOverlay_DrawPawnGUIOverlay_Patch.Postfix)));
+                    }
+                    else
+                    {
+                        Log.Warning("[AutoEverything] PawnUIOverlay.DrawPawnGUIOverlay 未找到，头顶星标降级为无显示");
+                    }
                 }
                 else
                 {
-                    Log.Warning("[AutoEverything] ColonistBar.DrawColonist 未找到，红色星标覆盖图降级为仅名字后缀");
+                    Log.Warning("[AutoEverything] PawnUIOverlay 类型未找到，头顶星标降级为无显示");
                 }
             }
             catch (Exception ex)
             {
-                Log.Warning("[AutoEverything] ColonistBar.DrawColonist patch 失败: " + ex.Message);
+                Log.Warning("[AutoEverything] PawnUIOverlay 补丁失败: " + ex.Message);
             }
             Log.Message("[AutoEverything] Harmony 补丁已应用 (显式注册 Postfix)");
         }
@@ -95,6 +105,10 @@ namespace AutoEverything.Core
 
         // 防止重复注入标志：注入操作只需执行一次
         private static bool _compAdded;
+
+        // PawnUIOverlay.pawn 私有字段缓存：运行时反射查找，类型不存在则为 null
+        // Postfix 通过此字段获取 PawnUIOverlay 关联的 Pawn 实例
+        private static FieldInfo pawnUIOverlayPawnField;
 
         /// <summary>
         /// 遍历 DefDatabase 中所有 Pawn 类别 ThingDef，
@@ -183,47 +197,85 @@ namespace AutoEverything.Core
         }
 
         /// <summary>
-        /// ColonistBar.DrawColonist 的 Postfix：在殖民者栏为 S+ 殖民者绘制鲜艳红色星标。
-        /// 仅在 autoMarkPawn 开启且 Pawn 为高价值（S+）时绘制。
-        /// 星标绘制在殖民者栏条目右上角，与名字后缀 "★" 形成双重视觉提示。
+        /// PawnUIOverlay.DrawPawnGUIOverlay 的 Postfix：在非殖民者高价值 Pawn 头顶绘制鲜艳红色星标。
+        /// 仅在 autoMarkPawn 开启且 Pawn 为可标记的非殖民者高价值对象（S+）时绘制。
         ///
-        /// 参数绑定：DrawColonist(Rect rect, Pawn colonist, ...) 的前两个参数。
-        /// 若 RimWorld 版本差异导致参数名不匹配，Postfix 不绘制（降级为仅名字后缀星标）。
+        /// 实现要点：
+        /// - 通过反射获取 PawnUIOverlay.pawn 私有字段（兼容 RimWorld 版本差异，类型不存在则降级）
+        /// - 世界坐标转屏幕坐标：pawn.DrawPos 上方约 1.8 格（头顶位置）
+        /// - GUI 坐标 Y 轴翻转：Screen.height - screenPos.y
+        /// - 不修改任何 Pawn 数据，纯前端绘制，安全可逆
+        ///
+        /// 标记范围：敌对派系敌人 / 友好派系访客 / 交易者 / 野生人类难民（非殖民者人类）
         /// </summary>
-        public static class ColonistBar_DrawColonist_Patch
+        public static class PawnUIOverlay_DrawPawnGUIOverlay_Patch
         {
             private static readonly Color StarColor = new Color(1.0f, 0.15f, 0.15f);
 
-            public static void Postfix(Rect rect, Pawn colonist)
+            public static void Postfix(object __instance)
             {
                 if (!AESettings.enabled || !AESettings.autoMarkPawn) return;
-                if (colonist == null) return;
-                if (rect.width <= 0f) return;
+                if (pawnUIOverlayPawnField == null) return;
 
+                Pawn pawn;
                 try
                 {
-                    if (!PawnMarker.IsHighValue(colonist)) return;
-
-                    // 在殖民者栏条目右上角绘制红色星标
-                    float starSize = 14f;
-                    Rect starRect = new Rect(rect.xMax - starSize - 2f, rect.y + 2f, starSize, starSize);
-
-                    Color prevColor = GUI.color;
-                    GUI.color = StarColor;
-                    Text.Font = GameFont.Small;
-                    Text.Anchor = TextAnchor.MiddleCenter;
-                    bool prevWrap = Text.WordWrap;
-                    Text.WordWrap = false;
-                    Widgets.Label(starRect, TierTagHelper.StarMarker);
-                    Text.WordWrap = prevWrap;
-                    Text.Anchor = TextAnchor.UpperLeft;
-                    GUI.color = prevColor;
+                    pawn = pawnUIOverlayPawnField.GetValue(__instance) as Pawn;
                 }
                 catch (Exception ex)
                 {
-                    Log.ErrorOnce("[AutoEverything] 殖民者栏星标绘制失败: " + ex.Message,
-                        (colonist?.thingIDNumber ?? 0) ^ 0xA600);
+                    Log.ErrorOnce("[AutoEverything] PawnUIOverlay pawn 字段读取失败: " + ex.Message, 0xA610);
+                    return;
                 }
+                if (pawn == null) return;
+                if (!PawnMarker.IsMarkableTarget(pawn)) return;
+                if (!PawnMarker.IsHighValue(pawn)) return;
+
+                try
+                {
+                    DrawStarAbovePawn(pawn);
+                }
+                catch (Exception ex)
+                {
+                    Log.ErrorOnce("[AutoEverything] 头顶星标绘制失败: " + ex.Message,
+                        pawn.thingIDNumber ^ 0xA600);
+                }
+            }
+
+            /// <summary>
+            /// 在 Pawn 头顶绘制鲜艳红色 ★ 图标。
+            /// 世界坐标 pawn.DrawPos 上方约 1.8 格 → 屏幕坐标 → GUI 坐标（Y 轴翻转）。
+            /// </summary>
+            private static void DrawStarAbovePawn(Pawn pawn)
+            {
+                // 头顶世界坐标：DrawPos 上方（y 轴为高度方向）
+                Vector3 worldPos = pawn.DrawPos + new Vector3(0f, 1.8f, 0f);
+                Vector3 screenPos = Find.Camera.WorldToScreenPoint(worldPos);
+                // screenPos.z <= 0 表示在相机后面或同一平面，不绘制
+                if (screenPos.z <= 0) return;
+
+                // GUI 坐标（Y 轴翻转：Unity Screen 原点在左下，GUI 原点在左上）
+                float guiX = screenPos.x;
+                float guiY = Screen.height - screenPos.y;
+
+                float starSize = 20f;
+                Rect starRect = new Rect(guiX - starSize / 2f, guiY - starSize / 2f, starSize, starSize);
+
+                Color prevColor = GUI.color;
+                GUI.color = StarColor;
+                GameFont prevFont = Text.Font;
+                Text.Font = GameFont.Medium;
+                TextAnchor prevAnchor = Text.Anchor;
+                Text.Anchor = TextAnchor.MiddleCenter;
+                bool prevWrap = Text.WordWrap;
+                Text.WordWrap = false;
+
+                Widgets.Label(starRect, TierTagHelper.StarMarker);
+
+                Text.WordWrap = prevWrap;
+                Text.Anchor = prevAnchor;
+                Text.Font = prevFont;
+                GUI.color = prevColor;
             }
         }
     }
