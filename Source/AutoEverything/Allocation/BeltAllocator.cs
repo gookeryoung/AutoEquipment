@@ -10,24 +10,27 @@ using AutoEverything.AutoEquipment.Scoring;
 namespace AutoEverything.Allocation
 {
     /// <summary>
-    /// 腰带附件全局分配器：为纯近战角色（射击无火）分配护盾腰带或消防背包。
+    /// 腰带附件全局分配器：为重甲前排（Brawler）分配护盾腰带或消防背包。
     ///
     /// 设计目的：
-    /// - 纯近战角色需要贴身作战，护盾腰带提供远程防护，消防背包应对火灾/机械族
-    /// - 全局协调：至少确保 1 名殖民者装备消防背包，避免全员护盾导致火灾无人应对
-    /// - 复用 CombatEvaluator.ComputeCombatValue 按战斗价值降序分配
+    /// - 重甲前排承担近战伤害，护盾腰带提供远程免疫，消防背包应对火灾/机械族
+    /// - 评级低者优先：评级低的重甲前排承担伤害能力较弱，优先配消防背包增强生存
+    /// - 取消全局保底逻辑：改为"前 2 人强制消防背包"规则，更符合战术需求
     ///
     /// 分配规则：
-    /// 1. 收集所有纯近战角色（射击无火）且 belt 层空缺的殖民者
-    /// 2. 收集地图上所有 belt 类附件候选（ShieldBelt / FirefoamPack）
-    /// 3. 若全局无任何殖民者穿戴消防背包，强制最高战斗价值纯近战角色拿消防背包
-    /// 4. 其余纯近战角色在护盾与消防背包中按评分选择
+    /// 1. 收集所有重甲前排（Heavy=Brawler）且 belt 层空缺的殖民者
+    /// 2. 按 CombatTier 升序排序（评级低者优先）
+    /// 3. 收集地图上所有 belt 类附件候选（ShieldBelt / FirefoamPack）
+    /// 4. 前 2 人强制分配消防背包（若库存有），其余配护盾腰带
     /// </summary>
     public static class BeltAllocator
     {
         // 全局分配间隔：≥ 2500 tick（规则要求），3000 tick ≈ 50 秒
         private const int AllocationInterval = 3000;
         private static int lastAllocationTick = -9999;
+
+        // 消防背包最低配备人数：重甲前排至少 2 人配消防背包
+        private const int MinFirefoamPawns = 2;
 
         // 候选缓存（Tick 路径禁止 new List，复用静态字段）
         private static readonly List<Pawn> candidatePawns = new List<Pawn>();
@@ -47,64 +50,58 @@ namespace AutoEverything.Allocation
         }
 
         /// <summary>
-        /// 全局分配：收集候选并按战斗价值降序分配 belt。
+        /// 全局分配：收集候选并按 CombatTier 升序分配 belt。
+        /// 评级低者优先配消防背包，其余配护盾腰带。
         /// </summary>
         private static void AllocateAllColonists()
         {
             candidatePawns.Clear();
             candidateBelts.Clear();
 
-            bool anyFirefoamWorn = false;
-
             foreach (Map map in Find.Maps)
             {
-                CollectCandidatePawns(map, ref anyFirefoamWorn);
+                CollectCandidatePawns(map);
                 CollectCandidateBelts(map);
             }
 
             if (candidatePawns.Count == 0 || candidateBelts.Count == 0) return;
 
-            // 按战斗价值降序排序（高价值优先）——List.Sort 非 LINQ，Tick 路径允许
-            // 预计算缓存：List.Sort 是 O(n log n) 次比较，避免每次比较重复调用
-            // ComputeCombatValue（涉及技能查询与特质查询），50 人约省 300 次重复计算
-            var combatValueCache = new Dictionary<Pawn, float>();
-            for (int i = 0; i < candidatePawns.Count; i++)
-            {
-                combatValueCache[candidatePawns[i]] = CombatEvaluator.ComputeCombatValue(candidatePawns[i]);
-            }
-            candidatePawns.Sort((a, b) => combatValueCache[b].CompareTo(combatValueCache[a]));
+            // 按 CombatTier 升序排序（评级低者优先）——List.Sort 非 LINQ，Tick 路径允许
+            // 设计意图：评级低的重甲前排承担伤害能力较弱，优先配消防背包增强生存
+            candidatePawns.Sort((a, b) =>
+                CombatEvaluator.GetAutoCombatTier(a).CompareTo(CombatEvaluator.GetAutoCombatTier(b)));
 
-            // 全局保底：若无任何殖民者穿戴消防背包，强制最高价值纯近战角色拿消防背包
-            bool forceFirefoam = !anyFirefoamWorn;
-            bool firefoamAssigned = false;
+            // 前 2 人强制分配消防背包（若库存有），其余配护盾腰带
+            int firefoamCount = 0;
 
             for (int i = 0; i < candidatePawns.Count; i++)
             {
                 Pawn pawn = candidatePawns[i];
                 if (HasBelt(pawn)) continue;
 
-                // 首个高价值 Pawn 强制拿消防背包（若全局无人穿戴）
-                if (forceFirefoam && !firefoamAssigned)
+                // 优先给前 2 人（评级最低者）配消防背包
+                if (firefoamCount < MinFirefoamPawns)
                 {
                     int firefoamIdx = FindFirstFirefoamPackIndex();
                     if (firefoamIdx >= 0)
                     {
-                        Thing firefoam = candidateBelts[firefoamIdx];
-                        AssignBelt(pawn, firefoam, "全局保底消防背包");
+                        AssignBelt(pawn, candidateBelts[firefoamIdx], "重甲前排消防背包(评级优先)");
                         // null 占位避免 Remove 的 O(n) 列表重排
                         candidateBelts[firefoamIdx] = null;
-                        firefoamAssigned = true;
+                        firefoamCount++;
                         continue;
                     }
                 }
 
-                // 其余 Pawn 在护盾与消防背包中按评分选择
+                // 其余候选在护盾腰带与消防背包中按评分选择
+                // ScoreBelt：Heavy+护盾+100，Heavy+消防+60（默认护盾腰带胜出）
                 Thing best = null;
                 float bestScore = 0f;
                 int bestIdx = -1;
 
                 // 缓存 ArmorPreference 避免在内层循环重复调用 DetectRole（性能优化）
-                ArmorPreference armorPref = RoleDetector.GetArmorPreference(RoleDetector.DetectRole(pawn));
+                // 候选池已全部为 Heavy，此处 armorPref 必为 Heavy，但保留以维持 ScoreBelt 签名
+                ArmorPreference armorPref = ArmorPreference.Heavy;
 
                 for (int j = 0; j < candidateBelts.Count; j++)
                 {
@@ -129,7 +126,7 @@ namespace AutoEverything.Allocation
             }
         }
 
-        private static void CollectCandidatePawns(Map map, ref bool anyFirefoamWorn)
+        private static void CollectCandidatePawns(Map map)
         {
             foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
             {
@@ -141,11 +138,11 @@ namespace AutoEverything.Allocation
                 CompGearManager comp = pawn.GetComp<CompGearManager>();
                 if (comp == null || comp.locked) continue;
 
-                // 检查当前穿戴的消防背包（用于全局保底判定）
-                if (IsWearingFirefoamPack(pawn)) anyFirefoamWorn = true;
-
-                // 仅纯近战角色（射击无火）参与 belt 分配
-                if (!PawnCombatProfile.IsPureMeleeShooter(pawn)) continue;
+                // 仅重甲前排（Heavy=Brawler）参与 belt 分配
+                // 设计意图：护盾腰带阻挡远程射击，仅适合近战角色；
+                // 消防背包也优先给前排承担伤害的重甲单位
+                Role role = RoleDetector.DetectRole(pawn);
+                if (RoleDetector.GetArmorPreference(role) != ArmorPreference.Heavy) continue;
 
                 // 必须有 belt 空位
                 if (HasBelt(pawn)) continue;
@@ -165,26 +162,25 @@ namespace AutoEverything.Allocation
         }
 
         /// <summary>
-        /// belt 评分：护盾腰带仅给重甲前排（Heavy），消防背包对所有纯近战角色可用。
-        /// 设计意图：护盾腰带阻挡远程射击，自由后排（Flexible）需远程输出，不适用护盾；
-        /// 重甲前排（Heavy=Brawler）以近战为主，护盾提供远程免疫最为契合。
-        /// 注：armorPref 由调用方缓存传入，避免内层循环重复调用 DetectRole。
+        /// belt 评分：护盾腰带对重甲前排 +100，消防背包对所有候选 +60。
+        /// 设计意图：候选池已全部为 Heavy，护盾腰带默认胜出；
+        /// 消防背包评分较低，仅在前 2 人强制分配逻辑中选用。
+        /// 注：armorPref 由调用方传入（恒为 Heavy），保留签名以便未来扩展。
         /// </summary>
         private static float ScoreBelt(Pawn pawn, Thing belt, ArmorPreference armorPref)
         {
             float score = 0f;
 
-            // 护盾腰带：仅重甲前排（Heavy）加分，Flexible/Light 不加分（0 分不入选）
+            // 护盾腰带：仅重甲前排（Heavy）加分
             if (GearDefClassifier.IsShieldBelt(belt))
             {
                 if (armorPref == ArmorPreference.Heavy)
                 {
                     score += 100f;
                 }
-                // Flexible/Light：0 分，护盾腰带不会分配给后排/工人
             }
 
-            // 消防背包：应对火灾/机械族，所有纯近战角色可用
+            // 消防背包：应对火灾/机械族，所有候选可用
             if (GearDefClassifier.IsFirefoamPack(belt))
             {
                 score += 60f;
@@ -205,7 +201,7 @@ namespace AutoEverything.Allocation
             var job = JobMaker.MakeJob(JobDefOf.Wear, belt);
             pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc);
 
-            Log.Message($"[AutoEverything] 腰带分配: {AEDebug.Label(pawn)} (战斗价值={CombatEvaluator.ComputeCombatValue(pawn):F1}) ← {belt.LabelShort} (reason={reason})");
+            Log.Message($"[AutoEverything] 腰带分配: {AEDebug.Label(pawn)} (评级={CombatEvaluator.GetAutoCombatTier(pawn)}) ← {belt.LabelShort} (reason={reason})");
         }
 
         // ===================== 判定辅助 =====================
@@ -230,20 +226,6 @@ namespace AutoEverything.Allocation
             for (int i = 0; i < worn.Count; i++)
             {
                 if (IsBelt(worn[i])) return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// 检查 Pawn 是否已穿戴消防背包。
-        /// </summary>
-        private static bool IsWearingFirefoamPack(Pawn pawn)
-        {
-            if (pawn.apparel?.WornApparel == null) return false;
-            List<Apparel> worn = pawn.apparel.WornApparel;
-            for (int i = 0; i < worn.Count; i++)
-            {
-                if (GearDefClassifier.IsFirefoamPack(worn[i])) return true;
             }
             return false;
         }

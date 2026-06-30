@@ -32,6 +32,16 @@ namespace AutoEverything.AutoEquipment.Scoring.Weapon
             bool isMelee = gear.def.IsMeleeWeapon;
             bool isRanged = gear.def.IsRangedWeapon;
 
+            // 角色定位硬约束：仅 Brawler（重甲前排）允许近战武器
+            // 设计意图：Worker/Doctor/Pacifist/Default（Light）轻甲无防护不宜近战，
+            // Shooter/Hunter/Leader（Flexible）应优先远程输出，近战武器会让他们失去远程优势
+            if (isMelee && role != Role.Brawler)
+            {
+                breakdown.Veto(-9000f);
+                breakdown.AddScore(Name, "非格斗者+近战=拒绝", -9000f);
+                return;
+            }
+
             // 护盾腰带：拒绝远程武器（护盾会阻挡所有远程射击，远程武器无效）
             // 设计意图：带护盾腰带的角色只能近战，远程武器对持盾者完全无用
             if (isRanged && IsWearingShieldBelt(pawn))
@@ -112,7 +122,7 @@ namespace AutoEverything.AutoEquipment.Scoring.Weapon
         }
 
         // 检查 Pawn 是否穿戴护盾腰带（用 GearDefClassifier.IsShieldBelt 遍历 apparel）
-        // 与 SidearmAllocator.IsWearingShieldBelt 逻辑一致，此处不引入跨命名空间依赖
+        // 局部实现避免跨命名空间依赖
         private static bool IsWearingShieldBelt(Pawn pawn)
         {
             if (pawn.apparel?.WornApparel == null) return false;
