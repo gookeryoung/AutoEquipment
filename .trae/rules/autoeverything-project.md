@@ -127,6 +127,8 @@
 - [ ] 改了 Brawler Veto/双修偏好/EMP 副武器/贴身切换？→ README `主武器选择规则` 表格已更新
 - [ ] 改了 `BeltAllocator.cs`？→ README `腰带附件全局分配` 章节已更新
 - [ ] 改了 `GetArmorPreference`？→ README `护甲偏好` 表格已更新
+- [ ] 改了 `AutoExecutor.cs`？→ README `自动执行` 章节 + `评估周期` 表格已更新
+- [ ] 改了 ITab 底部勾选框（人员自动评级/工作自动配置）？→ README `全局人物评级标签` + `自动工作分配` 入口章节已更新
 - [ ] `make check` 通过
 - [ ] 调用 `uvx --from pyflowx gitt a`, `uvx --from pyflowx pymake p` 提交代码
 

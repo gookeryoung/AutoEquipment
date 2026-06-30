@@ -66,7 +66,13 @@ namespace AutoEverything.AutoEquipment
 
         public override void CompTick()
         {
-            if (!AESettings.enabled || locked) return;
+            if (!AESettings.enabled) return;
+
+            // 全局自动执行（工作重配 + 人员评级）：静态门控，每 60 tick 检查一次
+            // 放在 locked 检查之前：即使本 Pawn 被锁定，全局自动执行仍应为其他殖民者运行
+            AutoExecutor.TryTick();
+
+            if (locked) return;
             if (Pawn.Dead || Pawn.Downed || Pawn.Map == null) return;
 
             // 兜底防御：旧存档可能已注入动物/机械族等不适用类别的 Comp，

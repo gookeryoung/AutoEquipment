@@ -216,9 +216,17 @@
   <AE_TT_GlobalReallocate>放下所有殖民者武器与护甲，按战斗价值降序重新分配。食尸鬼会被自动跳过。</AE_TT_GlobalReallocate>
 
   <!-- AutoWork 自动工作分配 -->
-  <AE_AutoWork>自动工作分配</AE_AutoWork>
+  <AE_AutoWork>工作自动配置</AE_AutoWork>
   <AE_GlobalWorkReallocate>全局工作重配</AE_GlobalWorkReallocate>
   <AE_GlobalWorkReallocateResult>已为 {0} 个殖民者重新分配工作优先级</AE_GlobalWorkReallocateResult>
   <AE_TT_GlobalWorkReallocate>按工作分类与多遍协调重新分配所有殖民者的工作优先级。
 紧急工作=1；关键工作（医疗/监管/保育）有兴趣top2=1且保证≥2人；狩猎最多2人，后排优先；研究保证1人；其他技能工作保证2人，按兴趣→技能→工作计数排序；保证数量外的有兴趣者=4备选，无兴趣者=0禁用；搬运/清洁均按档位=1/3/4。</AE_TT_GlobalWorkReallocate>
+
+  <!-- ITab 底部勾选框（自动执行） -->
+  <AE_AutoTierTag>人员自动评级</AE_AutoTierTag>
+  <AE_AutoWorkConfig>工作自动配置</AE_AutoWorkConfig>
+  <AE_TT_AutoTierTag>勾选后自动执行人员评级：每 3000 tick 一次，新增殖民者时立即触发。
+勾选时立即执行一次；取消勾选时清除所有评级标签并恢复原名。</AE_TT_AutoTierTag>
+  <AE_TT_AutoWorkConfig>勾选后自动执行工作重配：每 3000 tick 一次，新增殖民者时立即触发。
+勾选时立即执行一次；取消勾选仅停止自动执行，保留当前工作分配。</AE_TT_AutoWorkConfig>
 </LanguageData>

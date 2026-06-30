@@ -267,12 +267,16 @@
 
 ### 全局人物评级标签（Nick 改名 + 殖民者栏重排）
 
-面板底部"全局人物评级"按钮弹出 FloatMenu，提供 2 个选项：
+面板底部"人员自动评级"勾选框控制评级标签的自动应用：
+
+- **勾选时**：立即执行一次评级应用，并启用自动执行（每 3000 tick + 新增殖民者时立即触发）
+- **取消勾选时**：清除所有殖民者（含食尸鬼）Nick 上的评级前缀，恢复原名；保留殖民者栏当前顺序不重置
+- **默认勾选**
 
 | 操作 | 效果 |
 |------|------|
-| 应用评级到名字 | 所有殖民者 Nick 变为 `S#王五` `A#李四` 格式，并按 Mod 选项配置的默认排序重排殖民者栏 |
-| 清除评级标签 | 恢复原 Nick，从字典取原名或按前缀解析剥离；保留殖民者栏当前顺序不重置 |
+| 勾选 → 自动执行 | 所有殖民者 Nick 变为 `S#王五` `A#李四` 格式，并按 Mod 选项配置的默认排序重排殖民者栏 |
+| 取消勾选 | 恢复原 Nick，从字典取原名或按前缀解析剥离；保留殖民者栏当前顺序不重置 |
 
 **覆盖范围**：殖民者 + 食尸鬼（Anomaly DLC）。食尸鬼也按相同规则评级，但不参与装备分配——玩家可一眼分辨其价值。排序仅作用于 `PawnsFinder.AllMaps_FreeColonists`（不含食尸鬼），通过 `pawn.playerSettings.displayOrder` 写入并 `Find.ColonistBar.MarkColonistsDirty()` 刷新。
 
@@ -378,8 +382,23 @@ Passion 量化：None=0, Minor=1, Major=2。
 
 ### 入口
 
-- MOD 选项 → 启用/禁用"自动工作分配"
-- 殖民者装备面板（ITab）底部 → "全局工作重配"按钮（仅当 autoWorkEnabled=true 时显示）
+- **MOD 选项** → 启用/禁用"工作自动配置"（`AESettings.autoWorkEnabled`，默认勾选）
+- **殖民者装备面板（ITab）底部** → "工作自动配置"勾选框
+  - **勾选时**：立即执行一次工作重配，并启用自动执行（每 3000 tick + 新增殖民者时立即触发）
+  - **取消勾选时**：仅停止自动执行，保留当前工作分配（工作优先级无法撤销）
+  - **默认勾选**
+
+## 自动执行（AutoExecutor）
+
+`Core/AutoExecutor.cs` 静态类负责工作重配与人员评级的周期/新增殖民者自动触发。
+
+- **入口**：由 `CompGearManager.CompTick` 每 tick 调用 `AutoExecutor.TryTick()`
+- **静态门控**：每 60 tick 检查一次殖民者数量变化与周期触发
+- **周期触发**：每 3000 tick（约 50 秒）执行一次工作重配与人员评级
+- **新增殖民者检测**：`PawnsFinder.AllMaps_FreeColonists.Count` 增加 → 立即触发（不弹消息框）
+- **首次初始化守卫**：`lastWorkTick`/`lastTierTick` < 0 时设为当前 tick 不触发，避免存档加载误触发
+- **错误隔离**：工作与评级各自独立 try-catch + `Log.ErrorOnce`，salt 独立
+- **自动周期路径不弹消息框**（避免刷屏），仅走 `AEDebug.Log`；手动触发路径弹 `Messages.Message` 给玩家反馈
 
 ## 架构模型
 
@@ -458,6 +477,9 @@ Source/AutoEverything/
 | 征召副武器检查 | 30 tick | 战斗紧迫，需快速切近战 |
 | `SidearmAllocator` | 2000 tick | 全局副武器分配 |
 | `BeltAllocator` | 3000 tick | 全局腰带附件分配（护盾腰带/消防背包） |
+| `AutoExecutor` 殖民者检查 | 60 tick | 殖民者数量增加时立即触发工作+评级 |
+| `AutoExecutor` 工作重配 | 3000 tick | 周期 + 新增殖民者 + ITab 勾选时触发 |
+| `AutoExecutor` 人员评级 | 3000 tick | 周期 + 新增殖民者 + ITab 勾选时触发 |
 | 角色缓存 | `RoleCacheInterval`（2500 tick） | 避免每 tick 重复检测 |
 | 检视面板缓存 | 60 tick | ITab 角色徽章/数值摘要刷新 |
 | 死亡 Pawn 字典清理 | 60000 tick | `RoleDetector`/`ContextDetector` 残留条目清理 |

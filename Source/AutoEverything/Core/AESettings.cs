@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -18,6 +18,7 @@ namespace AutoEverything.Core
         public static bool autoInventory = true;
         public static bool sidearms = true;
         public static bool autoWorkEnabled = true;  // AutoWork 自动工作分配主开关
+        public static bool autoTierTag = true;       // 人员自动评级（周期触发 + 新增人员触发）
 
         // 情境切换
         public static bool combatSwitch = true;      // 征召/取消征召时切换装备
@@ -450,6 +451,7 @@ namespace AutoEverything.Core
             LookCompat(ref lightArmorPenaltyForHeavy, "lightArmorPenaltyForHeavy", -1000f);
             LookCompat(ref debugLogging, "debugLogging", false);
             LookCompat(ref autoWorkEnabled, "autoWorkEnabled", true);
+            LookCompat(ref autoTierTag, "autoTierTag", true);
             // 殖民者栏默认排序方式
             Scribe_Values.Look(ref defaultSortMode, "ae_defaultSortMode", ColonistBarSortMode.ByTierThenValue);
 

@@ -7,7 +7,6 @@ using AutoEverything.RoleEvaluation;
 using AutoEverything.AutoEquipment;
 using AutoEverything.AutoEquipment.Scoring;
 using AutoEverything.Allocation;
-using AutoEverything.AutoWork;
 
 namespace AutoEverything.UI
 {
@@ -137,14 +136,15 @@ namespace AutoEverything.UI
             // 食尸鬼可能没有 comp（被排除注入），仍允许显示评级信息
             bool isGhoul = DLCCompat.IsGhoul(pawn);
 
-            // 底部按钮区预留高度：两按钮 + 间隔
+            // 底部区预留高度：2 勾选框 + 1 按钮 + 3 间隔
             float buttonHeight = 30f;
             float buttonGap = 8f;
+            float checkboxHeight = 24f;
 
             Rect rect = new Rect(0f, 0f, size.x, size.y).ContractedBy(10f);
 
-            // 内容区高度 = 总高 - 三按钮区
-            Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (buttonHeight * 3 + buttonGap * 3));
+            // 内容区高度 = 总高 - 底部区（2 勾选框 + 1 按钮 + 3 间隔）
+            Rect contentRect = new Rect(rect.x, rect.y, rect.width, rect.height - (checkboxHeight * 2 + buttonHeight + buttonGap * 3));
 
             // ===================== 缓存计算展示数据 =====================
             // FillTab 每帧调用，角色/情境/评级计算涉及技能与特质查询，缓存 60 tick 避免重复计算
@@ -310,50 +310,60 @@ namespace AutoEverything.UI
             cachedContentHeight = l.CurHeight + 20f;
             Widgets.EndScrollView();
 
-            // ===================== 底部按钮：全局人物评级 + 全局装备重配 =====================
-            // 上方按钮：全局人物评级，弹出 FloatMenu 含应用/清除评级标签两个操作
-            Rect tierTagBtnRect = new Rect(
+            // ===================== 底部区：2 勾选框 + 1 按钮 =====================
+            // 1. 人员自动评级勾选框：勾选立即执行 + 启用周期自动；取消勾选清除所有评级标签恢复原名
+            Rect tierCheckRect = new Rect(
                 rect.x,
                 contentRect.yMax + buttonGap,
                 rect.width,
-                buttonHeight);
+                checkboxHeight);
 
-            if (Widgets.ButtonText(tierTagBtnRect, "AE_GlobalTierTag".Translate()))
+            bool prevWrap1 = Text.WordWrap;
+            Text.WordWrap = false;
+            bool prevTierTag = AESettings.autoTierTag;
+            Widgets.CheckboxLabeled(tierCheckRect, "AE_AutoTierTag".Translate(), ref AESettings.autoTierTag);
+            Text.WordWrap = prevWrap1;
+            TooltipHandler.TipRegion(tierCheckRect, "AE_TT_AutoTierTag".Translate());
+            // 状态变化检测：勾选时立即执行；取消勾选时清除评级标签
+            if (AESettings.autoTierTag != prevTierTag)
             {
-                // 弹出 FloatMenu：2 选项
-                // - 应用评级到名字：使用 Mod 选项配置的默认排序重排殖民者栏
-                // - 清除评级标签：恢复原名，保留殖民者栏当前顺序
-                // 排序方式在 Mod 选项 "默认排序" 里配置（ByTierThenValue/ByRoleThenTier/ByCombatValue/None）
-                var tierTagOptions = new List<FloatMenuOption>
+                if (AESettings.autoTierTag)
                 {
-                    new FloatMenuOption(
-                        "AE_TierTag_Apply".Translate(),
-                        () =>
-                        {
-                            int n = AESettings.ApplyTierTagsWithDefaultSort();
-                            Messages.Message(
-                                "AE_TierTag_ApplyResult".Translate(n),
-                                MessageTypeDefOf.TaskCompletion);
-                        }),
-                    new FloatMenuOption(
-                        "AE_TierTag_Clear".Translate(),
-                        () =>
-                        {
-                            int n = AESettings.ClearTierTagsFromAllPawns();
-                            Messages.Message(
-                                "AE_TierTag_ClearResult".Translate(n),
-                                MessageTypeDefOf.TaskCompletion);
-                        })
-                };
-                Find.WindowStack.Add(new FloatMenu(tierTagOptions));
+                    AutoExecutor.TriggerTierNow();
+                }
+                else
+                {
+                    int cleared = AESettings.ClearTierTagsFromAllPawns();
+                    Messages.Message(
+                        "AE_TierTag_ClearResult".Translate(cleared),
+                        MessageTypeDefOf.TaskCompletion);
+                }
             }
-            TooltipHandler.TipRegion(tierTagBtnRect, "AE_TT_GlobalTierTag".Translate());
 
-            // 下方按钮：全局装备重配（主操作按钮，加底色突出）
+            // 2. 工作自动配置勾选框：勾选立即执行 + 启用周期自动；取消勾选仅停止自动（保留当前分配）
+            Rect workCheckRect = new Rect(
+                rect.x,
+                tierCheckRect.yMax + buttonGap,
+                rect.width,
+                checkboxHeight);
+
+            bool prevWrap2 = Text.WordWrap;
+            Text.WordWrap = false;
+            bool prevWork = AESettings.autoWorkEnabled;
+            Widgets.CheckboxLabeled(workCheckRect, "AE_AutoWorkConfig".Translate(), ref AESettings.autoWorkEnabled);
+            Text.WordWrap = prevWrap2;
+            TooltipHandler.TipRegion(workCheckRect, "AE_TT_AutoWorkConfig".Translate());
+            // 状态变化检测：勾选时立即执行；取消勾选仅停止自动（无副作用）
+            if (AESettings.autoWorkEnabled && AESettings.autoWorkEnabled != prevWork)
+            {
+                AutoExecutor.TriggerWorkNow();
+            }
+
+            // 3. 全局装备重配按钮（保留原逻辑，打开 Dialog_GlobalReallocate）
             // 食尸鬼面板也显示此按钮（统一入口），但 GlobalAllocator 内部会跳过食尸鬼
             Rect buttonRect = new Rect(
                 rect.x,
-                tierTagBtnRect.yMax + buttonGap,
+                workCheckRect.yMax + buttonGap,
                 rect.width,
                 buttonHeight);
 
@@ -367,28 +377,6 @@ namespace AutoEverything.UI
             }
             GUI.backgroundColor = prevBtnBg;
             TooltipHandler.TipRegion(buttonRect, "AE_TT_GlobalReallocate".Translate());
-
-            // 第三个按钮：全局工作重配（仅当 autoWorkEnabled=true 时显示）
-            if (AESettings.autoWorkEnabled)
-            {
-                Rect workBtnRect = new Rect(
-                    rect.x,
-                    buttonRect.yMax + buttonGap,
-                    rect.width,
-                    buttonHeight);
-
-                Color prevWorkBg = GUI.backgroundColor;
-                GUI.backgroundColor = ColorPrimaryBtnBg;
-                if (Widgets.ButtonText(workBtnRect, "AE_GlobalWorkReallocate".Translate()))
-                {
-                    int triggered = WorkAllocator.ReallocateAll();
-                    Messages.Message(
-                        "AE_GlobalWorkReallocateResult".Translate(triggered),
-                        MessageTypeDefOf.TaskCompletion);
-                }
-                GUI.backgroundColor = prevWorkBg;
-                TooltipHandler.TipRegion(workBtnRect, "AE_TT_GlobalWorkReallocate".Translate());
-            }
         }
 
         // ===================== Section 卡片绘制 =====================
