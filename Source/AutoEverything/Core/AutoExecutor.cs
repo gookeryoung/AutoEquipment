@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using RimWorld;
 using Verse;
-using AutoEverything.Allocation;
 using AutoEverything.AutoEquipment;
 using AutoEverything.AutoWork;
 using AutoEverything.AutoMarkPawn;
+using AutoEverything.RoleEvaluation;
 
 namespace AutoEverything.Core
 {
@@ -43,6 +44,10 @@ namespace AutoEverything.Core
 
         // 殖民者数量缓存：-1 = 首次只记录不触发，避免存档加载误触发
         private static int lastColonistCount = -1;
+
+        // 装备重配候选缓存：按战斗价值降序排序后逐个 ForceEvaluate，避免 GC
+        private static readonly List<Pawn> gearCandidates = new List<Pawn>();
+        private static readonly Dictionary<Pawn, float> gearCombatValueCache = new Dictionary<Pawn, float>();
 
         // 错误去重 salt：每个错误点独立，避免跨方法冲突
         private const int WorkErrorSalt = 0xA200;
@@ -194,12 +199,15 @@ namespace AutoEverything.Core
         }
 
         /// <summary>
-        /// 执行装备重配：调用 GlobalAllocator.ReallocateAll(silent: true) 全局放下重配。
-        /// 与手动触发语义一致：先放下所有装备，按战斗价值降序全局重新分配，
-        /// 确保高评级殖民者优先获得好装备，避免低评分殖民者抢占。
-        /// 受 AESettings.autoGearReallocate 开关控制，关闭时不执行。
-        /// 过滤链（食尸鬼/不适用/Dead/Downed/奴隶/未成年/锁定/征召）由 ReallocateAll 内部统一处理。
-        /// silent=true 走 AEDebug.Log，避免周期触发刷屏控制台。
+        /// 执行装备重配：按战斗价值降序逐个调用 ForceEvaluate（升级阈值检查，不主动脱光）。
+        ///
+        /// 设计权衡：
+        /// - 周期自动重配不做"放下所有重配"（ReallocateAll），避免频繁脱穿导致殖民者心情差
+        /// - 按战斗价值降序处理：高评级殖民者优先评估，通过升级阈值拾取地图上的更好装备
+        /// - 低评分殖民者手里的好装备不会主动让出（仅手动"全局重配"按钮触发 ReallocateAll 时才让出）
+        /// - 受 AESettings.autoGearReallocate 开关控制，关闭时不执行
+        /// - 过滤链与 CompGearManager.CompTick 一致：食尸鬼/不适用/Dead/Downed/奴隶/锁定/征召 均排除
+        /// - 未成年仅评估防具（与 CompTick 守卫一致）
         /// try-catch 隔离：失败时 Log.ErrorOnce 记录，不影响其他逻辑。
         /// </summary>
         private static void ExecuteGear(int tick, bool showMessage)
@@ -209,7 +217,49 @@ namespace AutoEverything.Core
 
             try
             {
-                int n = GlobalAllocator.ReallocateAll(silent: true);
+                gearCandidates.Clear();
+                gearCombatValueCache.Clear();
+
+                foreach (Map map in Find.Maps)
+                {
+                    foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
+                    {
+                        if (DLCCompat.IsGhoul(pawn)) continue;
+                        if (!PawnSuitabilityChecker.CanManageGear(pawn)) continue;
+                        if (pawn.Dead || pawn.Downed) continue;
+                        if (DLCCompat.IsSlave(pawn)) continue;   // 奴隶未征召不参与自动装备
+                        if (pawn.Drafted) continue;              // 不打断征召战斗
+                        CompGearManager comp = pawn.GetComp<CompGearManager>();
+                        if (comp == null) continue;
+                        if (comp.locked) continue;               // 尊重玩家锁定
+
+                        gearCandidates.Add(pawn);
+                        gearCombatValueCache[pawn] = CombatEvaluator.ComputeCombatValue(pawn);
+                    }
+                }
+
+                // 按战斗价值降序排序：高评级殖民者优先评估选装备
+                gearCandidates.Sort((a, b) => gearCombatValueCache[b].CompareTo(gearCombatValueCache[a]));
+
+                int n = 0;
+                for (int i = 0; i < gearCandidates.Count; i++)
+                {
+                    Pawn pawn = gearCandidates[i];
+                    CompGearManager comp = pawn.GetComp<CompGearManager>();
+                    if (comp == null) continue;
+
+                    // 未成年仅评估防具，跳过武器/副武器/库存（与 CompGearManager.CompTick 守卫一致）
+                    if (DLCCompat.IsChild(pawn))
+                    {
+                        comp.ForceEvaluate(CompGearManager.ReloadTarget.Apparel);
+                    }
+                    else
+                    {
+                        comp.ForceEvaluate(CompGearManager.ReloadTarget.All);
+                    }
+                    n++;
+                }
+
                 AEDebug.Log(() => $"[AutoExecutor] 自动装备重配: {n} 个殖民者 (tick={tick})");
                 if (showMessage)
                 {
