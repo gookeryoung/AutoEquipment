@@ -463,9 +463,9 @@
 3. **有火保底**：超出 guarantee 的有火者至少给 `FloorPassionatePriority`（如 3），保留生产能力
 4. **无火技能兜底**：超出 guarantee 的无火者，`UseSkillFloorForNonPassionate=true` 时按技能等级兜底（≥12→2, ≥8→3, 否则 0）；`=false` 时直接给 `FloorNonPassionatePriority`
 
-**workCount 硬上限**：每人最多承担 `MaxCoreWorkCount=4` 项 priority≤2 的专业工作。候选收集阶段跳过已满载者，强制均衡负载。若严格收集后候选不足保证人数，回退放宽（含满载者），但满载者不抢占 Guarantee 优先级，只给 Floor 保底（避免工作很多的专家被回退后仍获得 priority=1）。
+**workCount 硬上限**：每人最多承担 `MaxCoreWorkCount=3` 项 priority≤2 的专业工作。候选收集阶段跳过已满载者，强制均衡负载。若严格收集后候选不足保证人数，回退放宽（含满载者），但满载者不抢占 Guarantee 优先级，只给 Floor 保底（避免工作很多的专家被回退后仍获得 priority=1）。
 
-**Crafting 技能组共享 workCount**：Crafting（制作）/Smithing（锻造）/Tailoring（缝制）三个工作类型都关联 Crafting 技能，视为 1 个专业工作，共享 1 个 workCount。避免手工专家因三个共享技能的工作快速达到上限。
+**Crafting 技能组分配**：Crafting（制作）/Smithing（锻造）/Tailoring（缝制）三个工作类型都关联 Crafting 技能，通过 `AssignWorkGroup` **一次排序、同时分配**相同优先级，共享 1 个 workCount。避免分三次独立排序导致 workCount 变化影响后续排序、手工工作分散给不同人。
 
 **奴隶处理**：奴隶在专业工作中与殖民者同流程，按兴趣/技能参与分配，无特殊优先级。奴隶的特殊处理仅在服务类工作（搬运/清洁/非技能）中生效，见下方[服务类工作规则](#服务类工作规则搬运清洁非技能)。
 
@@ -478,7 +478,8 @@
 | 1 | 紧急 | Firefighter / Patient / PatientBedRest | — | 全部 → 1 | 全部 → 1 | — | — | 不计入 workCount |
 | 2 | 关键 | Doctor / Warden / Childcare | 2 | 1 | 3 | 3 | 技能兜底 | — |
 | 3 | 烹饪 | Cooking | 1 | 1 | 2 | 3 | 0 | 生存关键，保证 1 人 priority≤2 |
-| 4 | 手工类 | Crafting / Smithing / Tailoring / Construction | 2 | 2 | 3 | 3 | 技能兜底 | Crafting 组共享 1 个 workCount；手工专家优先于狩猎分配 |
+| 4 | 手工类（组分配） | Smithing / Tailoring / Crafting | 2 | 2 | 3 | 3 | 技能兜底 | `AssignWorkGroup` 一次排序同时分配三者，共享 1 个 workCount；手工专家优先于狩猎分配 |
+| 4 | 建造 | Construction | 2 | 2 | 3 | 3 | 技能兜底 | 独立于手工组（关联 Construction 技能） |
 | 5 | 狩猎 | Hunting | 2 | 2 | 2 | 4 | 技能兜底 | 需远程武器 + 后排排序 |
 | 5 | 钓鱼 | Fishing | 2 | 3 | 3 | 3 | 技能兜底 | 需远程武器 + 后排排序 |
 | 5 | 割除 | PlantCutting | 2 | 1 | 0 | 3 | 0 | — |
@@ -497,8 +498,8 @@
 
 **工作计数**：跟踪每 Pawn 的 priority ≤ 2 的专业工作数量（紧急/服务类不计入）。
 用于「同等兴趣下优先安排其他工作少的」实现均衡负载。
-**硬上限**：每人最多 4 项 priority≤2 的专业工作，候选收集阶段跳过已满载者，候选不足时回退放宽（满载者降级至 Floor 保底，不抢占 Guarantee 优先级）。
-**Crafting 组共享**：Crafting/Smithing/Tailoring 三个工作类型关联同一 Crafting 技能，共享 1 个 workCount，视为 1 个专业工作。
+**硬上限**：每人最多 3 项 priority≤2 的专业工作，候选收集阶段跳过已满载者，候选不足时回退放宽（满载者降级至 Floor 保底，不抢占 Guarantee 优先级）。
+**Crafting 组分配**：Smithing/Tailoring/Crafting 三个工作类型通过 `AssignWorkGroup` 一次排序同时分配相同优先级，共享 1 个 workCount，视为 1 个专业工作。避免分三次独立排序导致 workCount 变化影响排序、手工工作分散给不同人。
 
 **三因子排序**：Passion 降序 → SkillLevel 降序 → WorkCount 升序。
 Passion 量化：None=0, Minor=1, Major=2。

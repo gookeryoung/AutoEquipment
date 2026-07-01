@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using RimWorld;
 using Verse;
 using AutoEverything.Core;
@@ -36,10 +37,6 @@ namespace AutoEverything.AutoWork
         // workCount 硬上限：每人最多承担 N 项 priority≤2 的专业工作，超限者跳过候选
         // 候选不足保证人数时回退放宽，保证小殖民地工作有人做
         private const int MaxCoreWorkCount = 3;
-
-        // Crafting 技能组（Crafting/Smithing/Tailoring）共享 1 个 workCount
-        // 这三个工作类型都关联 Crafting 技能，应视为 1 个专业工作，避免手工专家因三个共享技能的工作快速达到上限
-        private static readonly Dictionary<Pawn, bool> craftingSkillCounted = new Dictionary<Pawn, bool>();
 
         // ════════════════════════════════════════════════════════════
         // 工作分配配置（静态只读，避免每次分配重复构造）
@@ -155,7 +152,8 @@ namespace AutoEverything.AutoWork
 
         private struct WorkPhase
         {
-            public WorkTypeDef WorkType;
+            public WorkTypeDef WorkType;            // 单工作类型（WorkTypes 为 null 时使用）
+            public List<WorkTypeDef> WorkTypes;     // 工作类型组（非 null 时组分配：一次排序，同时分配，共享 1 个 workCount）
             public WorkAllocationConfig Config;
         }
 
@@ -238,19 +236,40 @@ namespace AutoEverything.AutoWork
 
             // 4. 重置工作计数（每次重配都从 0 开始，避免脏数据）
             workCount.Clear();
-            craftingSkillCounted.Clear();
             for (int i = 0; i < candidatePawns.Count; i++)
             {
                 workCount[candidatePawns[i]] = 0;
             }
 
+            AEDebug.Log(() => $"[WorkAllocator] === ReallocateAll start (pawns={candidatePawns.Count}) ===");
+
             // 5. 多遍分配（顺序严格固定，前排分配结果影响后排候选排序）
             // 阶段列表驱动：关键 → 烹饪 → 手工类 → 狩猎类 → 其他普通技能 → 研究
-            // 手工类提前到狩猎类之前：手工专家优先获得手工工作，避免被狩猎占用 workCount
+            // 手工类使用组分配：Smithing/Tailoring/Crafting 一次排序同时分配，共享 1 个 workCount
             AssignEmergencyPriorities();          // 第 1 遍：紧急工作
-            for (int i = 0; i < skillWorkPhases.Count; i++)  // 第 2-7 遍：技能工作
-                AssignWorkType(skillWorkPhases[i].WorkType, skillWorkPhases[i].Config);
-            AssignServiceWorkPriorities();        // 第 8 遍：服务类（搬运/清洁/非技能）
+            for (int i = 0; i < skillWorkPhases.Count; i++)  // 第 2-N 遍：技能工作
+            {
+                WorkPhase phase = skillWorkPhases[i];
+                if (phase.WorkTypes != null)
+                    AssignWorkGroup(phase.WorkTypes, phase.Config);
+                else
+                    AssignWorkType(phase.WorkType, phase.Config);
+            }
+            AssignServiceWorkPriorities();        // 最后一遍：服务类（搬运/清洁/非技能）
+
+            // 调试：dump 最终 workCount，便于分析硬上限拦截是否影响双火 pawn
+            AEDebug.Log(() =>
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("[WorkAllocator] Final workCount: ");
+                for (int i = 0; i < candidatePawns.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    sb.Append(AEDebug.Label(candidatePawns[i])).Append('=').Append(workCount[candidatePawns[i]]);
+                }
+                sb.Append("\n[WorkAllocator] === ReallocateAll end ===");
+                return sb.ToString();
+            });
 
             return candidatePawns.Count;
         }
@@ -305,7 +324,8 @@ namespace AutoEverything.AutoWork
         /// <summary>
         /// 构建技能工作分配阶段列表。
         /// 顺序：关键 → 烹饪 → 手工类 → 狩猎类 → 其他普通技能 → 研究
-        /// 手工类提前到狩猎类之前：手工专家优先获得手工工作，避免被狩猎占用 workCount
+        /// 手工类（Smithing/Tailoring/Crafting）使用组分配：一次排序、同时分配、共享 1 个 workCount，
+        /// 避免分三次排序导致 workCount 变化影响后续排序、手工工作分散给不同人。
         /// </summary>
         private static void BuildSkillWorkPhases()
         {
@@ -319,13 +339,19 @@ namespace AutoEverything.AutoWork
             if (cachedCookingDef != null)
                 skillWorkPhases.Add(new WorkPhase { WorkType = cachedCookingDef, Config = CookingConfig });
 
-            // 手工类（Crafting 组 + Construction）：优先于狩猎，避免手工专家被狩猎占用 workCount
+            // 手工类：Construction 单独阶段 + Crafting 组（Smithing/Tailoring/Crafting）组分配
+            // 组分配保证三个手工工作一次排序同时分给同一批人，共享 1 个 workCount
+            List<WorkTypeDef> craftingGroup = new List<WorkTypeDef>();
             for (int i = 0; i < otherSkillWorkDefs.Count; i++)
             {
                 WorkTypeDef wt = otherSkillWorkDefs[i];
-                if (IsCraftingSkillWork(wt) || wt.defName == "Construction")
+                if (IsCraftingSkillWork(wt))
+                    craftingGroup.Add(wt);
+                else if (wt.defName == "Construction")
                     skillWorkPhases.Add(new WorkPhase { WorkType = wt, Config = OtherSkillConfig });
             }
+            if (craftingGroup.Count > 0)
+                skillWorkPhases.Add(new WorkPhase { WorkTypes = craftingGroup, Config = OtherSkillConfig });
 
             // 狩猎类（Hunting/Fishing/PlantCutting/Growing）
             if (cachedHuntingDef != null)
@@ -348,6 +374,31 @@ namespace AutoEverything.AutoWork
             // 研究：最后分配，让手工专家先累加 workCount，研究时硬上限拦截
             if (cachedResearchDef != null)
                 skillWorkPhases.Add(new WorkPhase { WorkType = cachedResearchDef, Config = ResearchConfig });
+
+            // 调试：dump 阶段列表，确认所有工作类型（如 Mining）被正确纳入
+            AEDebug.Log(() =>
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("[WorkAllocator] Phases(").Append(skillWorkPhases.Count).Append("): ");
+                for (int i = 0; i < skillWorkPhases.Count; i++)
+                {
+                    if (i > 0) sb.Append(" → ");
+                    WorkPhase p = skillWorkPhases[i];
+                    if (p.WorkTypes != null)
+                    {
+                        for (int j = 0; j < p.WorkTypes.Count; j++)
+                        {
+                            if (j > 0) sb.Append('+');
+                            sb.Append(p.WorkTypes[j].defName);
+                        }
+                    }
+                    else
+                    {
+                        sb.Append(p.WorkType.defName);
+                    }
+                }
+                return sb.ToString();
+            });
         }
 
         /// <summary>
@@ -387,6 +438,21 @@ namespace AutoEverything.AutoWork
         private static bool IsCraftingSkillWork(WorkTypeDef wt)
         {
             return wt.relevantSkills != null && wt.relevantSkills.Contains(SkillDefOf.Crafting);
+        }
+
+        /// <summary>
+        /// 构造工作类型组标签（如 Smithing+Tailoring+Crafting），用于调试日志。
+        /// 仅在 debug 开启时调用。
+        /// </summary>
+        private static string BuildWorkGroupLabel(List<WorkTypeDef> workTypes)
+        {
+            StringBuilder lb = new StringBuilder();
+            for (int j = 0; j < workTypes.Count; j++)
+            {
+                if (j > 0) lb.Append('+');
+                lb.Append(workTypes[j].defName);
+            }
+            return lb.ToString();
         }
 
         // ════════════════════════════════════════════════════════════
@@ -533,8 +599,10 @@ namespace AutoEverything.AutoWork
             }
             // 回退放宽：严格候选不足保证人数时，重新收集全部候选（含满载者）
             // 场景：小殖民地人手不足，必须让已满载者承担更多工作
+            bool fallbackRelaxed = false;
             if (workCandidates.Count < config.GuaranteeCount)
             {
+                fallbackRelaxed = true;
                 workCandidates.Clear();
                 for (int i = 0; i < candidatePawns.Count; i++)
                 {
@@ -544,7 +612,22 @@ namespace AutoEverything.AutoWork
                     workCandidates.Add(pawn);
                 }
             }
-            if (workCandidates.Count == 0) return;
+            if (workCandidates.Count == 0)
+            {
+                AEDebug.Log(() => $"[WorkAllocator] {workType.defName}: SKIP (no candidates, total={candidatePawns.Count})");
+                return;
+            }
+
+            AEDebug.Log(() =>
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("[WorkAllocator] ").Append(workType.defName)
+                  .Append(": candidates=").Append(workCandidates.Count).Append('/').Append(candidatePawns.Count)
+                  .Append(" guarantee=").Append(config.GuaranteeCount)
+                  .Append(" requireRanged=").Append(config.RequireRangedWeapon);
+                if (fallbackRelaxed) sb.Append(" [FALLBACK RELAXED]");
+                return sb.ToString();
+            });
 
             // 排序：后排优先（仅狩猎类） → passion desc → skill desc → workCount asc
             if (config.UseBackRowSort)
@@ -562,6 +645,25 @@ namespace AutoEverything.AutoWork
             {
                 workCandidates.Sort((a, b) => ComparePawnsByPassionWorkCountSkill(a, b, workType.relevantSkills));
             }
+
+            // 调试：dump 排序后候选清单（passion/skill/workCount）
+            AEDebug.Log(() =>
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("[WorkAllocator] ").Append(workType.defName).Append(" sorted: ");
+                for (int i = 0; i < workCandidates.Count; i++)
+                {
+                    Pawn p = workCandidates[i];
+                    if (i > 0) sb.Append(", ");
+                    sb.Append(AEDebug.Label(p))
+                      .Append("[p=").Append(GetMaxPassionForSkills(p, workType.relevantSkills))
+                      .Append(" s=").Append(GetMaxSkillLevelForSkills(p, workType.relevantSkills))
+                      .Append(" wc=").Append(workCount[p])
+                      .Append(workCount[p] >= MaxCoreWorkCount ? "!" : "")
+                      .Append(']');
+                }
+                return sb.ToString();
+            });
 
             // 按配置分配优先级
             for (int i = 0; i < workCandidates.Count; i++)
@@ -592,25 +694,144 @@ namespace AutoEverything.AutoWork
                 }
 
                 pawn.workSettings.SetPriority(workType, priority);
+
+                // 调试：记录每个候选的最终优先级与归类（G=Guarantee/F=FloorPassion/N=NonPassion）
+                AEDebug.Log(() =>
+                {
+                    int finalIdx = i;
+                    string bucket = (finalIdx < config.GuaranteeCount && !isOverloaded)
+                        ? "G" : (hasPassion ? "F" : "N");
+                    int wcBefore = workCount[pawn];
+                    return $"[WorkAllocator] {workType.defName}[{finalIdx}] {AEDebug.Label(pawn)} p={GetMaxPassionForSkills(pawn, workType.relevantSkills)} s={GetMaxSkillLevelForSkills(pawn, workType.relevantSkills)} wc={wcBefore}{(isOverloaded ? "!" : "")} [{bucket}] → prio={priority}{(priority <= 2 ? " (+wc)" : "")}";
+                });
+
                 if (priority <= 2)
                 {
-                    // Crafting 技能组（Crafting/Smithing/Tailoring）共享 1 个 workCount
-                    // 这三个工作类型都关联 Crafting 技能，应视为 1 个专业工作
-                    bool isCraftingSkill = workType.relevantSkills != null
-                        && workType.relevantSkills.Contains(SkillDefOf.Crafting);
-                    if (isCraftingSkill)
-                    {
-                        bool alreadyCounted = craftingSkillCounted.TryGetValue(pawn, out bool counted) && counted;
-                        if (!alreadyCounted)
-                        {
-                            workCount[pawn]++;
-                            craftingSkillCounted[pawn] = true;
-                        }
-                    }
-                    else
-                    {
-                        workCount[pawn]++;
-                    }
+                    workCount[pawn]++;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 工作类型组分配：一次排序、同时为所有工作类型分配相同优先级、共享 1 个 workCount。
+        /// 用于手工类（Smithing/Tailoring/Crafting）：三者关联同一 Crafting 技能，
+        /// 应视为 1 个专业工作，避免分三次排序导致 workCount 变化影响后续排序、手工工作分散给不同人。
+        /// 实现复用 AssignWorkType 的候选收集/排序/优先级逻辑，仅末尾同时 SetPriority 多个工作类型。
+        /// </summary>
+        private static void AssignWorkGroup(List<WorkTypeDef> workTypes, WorkAllocationConfig config)
+        {
+            // 手工类三者 workTags 相同，用第一个过滤即可
+            WorkTypeDef firstWork = workTypes[0];
+            List<SkillDef> skills = firstWork.relevantSkills;
+
+            // 调试：构造工作类型组标签（如 Smithing+Tailoring+Crafting），仅在 debug 开启时构造
+            string groupLabel = AEDebug.IsActive ? BuildWorkGroupLabel(workTypes) : null;
+
+            // 候选收集：跳过已满载者（workCount 硬上限）
+            workCandidates.Clear();
+            for (int i = 0; i < candidatePawns.Count; i++)
+            {
+                Pawn pawn = candidatePawns[i];
+                if (pawn.WorkTagIsDisabled(firstWork.workTags)) continue;
+                if (config.RequireRangedWeapon && pawn.equipment?.Primary?.def.IsRangedWeapon != true) continue;
+                if (workCount[pawn] >= MaxCoreWorkCount) continue;
+                workCandidates.Add(pawn);
+            }
+            // 回退放宽
+            bool fallbackRelaxed = false;
+            if (workCandidates.Count < config.GuaranteeCount)
+            {
+                fallbackRelaxed = true;
+                workCandidates.Clear();
+                for (int i = 0; i < candidatePawns.Count; i++)
+                {
+                    Pawn pawn = candidatePawns[i];
+                    if (pawn.WorkTagIsDisabled(firstWork.workTags)) continue;
+                    if (config.RequireRangedWeapon && pawn.equipment?.Primary?.def.IsRangedWeapon != true) continue;
+                    workCandidates.Add(pawn);
+                }
+            }
+            if (workCandidates.Count == 0)
+            {
+                AEDebug.Log(() => $"[WorkAllocator] {groupLabel ?? "Group"}: SKIP (no candidates, total={candidatePawns.Count})");
+                return;
+            }
+
+            AEDebug.Log(() =>
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("[WorkAllocator] ").Append(groupLabel)
+                  .Append(": candidates=").Append(workCandidates.Count).Append('/').Append(candidatePawns.Count)
+                  .Append(" guarantee=").Append(config.GuaranteeCount);
+                if (fallbackRelaxed) sb.Append(" [FALLBACK RELAXED]");
+                return sb.ToString();
+            });
+
+            // 排序：passion desc → skill desc → workCount asc（手工类无需后排排序）
+            workCandidates.Sort((a, b) => ComparePawnsByPassionWorkCountSkill(a, b, skills));
+
+            // 调试：dump 排序后候选清单
+            AEDebug.Log(() =>
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("[WorkAllocator] ").Append(groupLabel).Append(" sorted: ");
+                for (int i = 0; i < workCandidates.Count; i++)
+                {
+                    Pawn p = workCandidates[i];
+                    if (i > 0) sb.Append(", ");
+                    sb.Append(AEDebug.Label(p))
+                      .Append("[p=").Append(GetMaxPassionForSkills(p, skills))
+                      .Append(" s=").Append(GetMaxSkillLevelForSkills(p, skills))
+                      .Append(" wc=").Append(workCount[p])
+                      .Append(workCount[p] >= MaxCoreWorkCount ? "!" : "")
+                      .Append(']');
+                }
+                return sb.ToString();
+            });
+
+            // 按配置分配优先级：对所有工作类型设置相同优先级
+            for (int i = 0; i < workCandidates.Count; i++)
+            {
+                Pawn pawn = workCandidates[i];
+                bool hasPassion = HasPassionForAnySkill(pawn, skills);
+                bool isOverloaded = workCount[pawn] >= MaxCoreWorkCount;
+                int priority;
+
+                if (i < config.GuaranteeCount && !isOverloaded)
+                {
+                    priority = hasPassion ? config.GuaranteePassionatePriority : config.GuaranteeNonPassionatePriority;
+                }
+                else if (hasPassion)
+                {
+                    priority = config.FloorPassionatePriority;
+                }
+                else
+                {
+                    priority = config.UseSkillFloorForNonPassionate
+                        ? GetSkillFloorPriority(pawn, skills)
+                        : config.FloorNonPassionatePriority;
+                }
+
+                // 对所有工作类型设置相同优先级（一次排序结果同时分配）
+                for (int j = 0; j < workTypes.Count; j++)
+                {
+                    pawn.workSettings.SetPriority(workTypes[j], priority);
+                }
+
+                // 调试：记录每个候选的最终优先级
+                AEDebug.Log(() =>
+                {
+                    int finalIdx = i;
+                    string bucket = (finalIdx < config.GuaranteeCount && !isOverloaded)
+                        ? "G" : (hasPassion ? "F" : "N");
+                    int wcBefore = workCount[pawn];
+                    return $"[WorkAllocator] {groupLabel}[{finalIdx}] {AEDebug.Label(pawn)} p={GetMaxPassionForSkills(pawn, skills)} s={GetMaxSkillLevelForSkills(pawn, skills)} wc={wcBefore}{(isOverloaded ? "!" : "")} [{bucket}] → prio={priority}{(priority <= 2 ? " (+wc)" : "")}";
+                });
+
+                // 整组只加 1 个 workCount（手工类视为 1 个专业工作）
+                if (priority <= 2)
+                {
+                    workCount[pawn]++;
                 }
             }
         }
