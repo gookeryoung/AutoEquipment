@@ -99,7 +99,7 @@ namespace AutoEverything.AutoWork
         {
             GuaranteeCount = 1,
             GuaranteePassionatePriority = 1,
-            GuaranteeNonPassionatePriority = 2,
+            GuaranteeNonPassionatePriority = 1,
             FloorPassionatePriority = 3,
             UseSkillFloorForNonPassionate = true,
             FloorNonPassionatePriority = 0,

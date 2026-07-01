@@ -479,7 +479,7 @@
 | 2 | 重要专业 | Doctor / Warden / Childcare / Cooking / PlantCutting | 2 | 1 | 3 | 3 | 技能兜底 | — |
 | 3 | 普通专业 | Construction / Mining / Growing / Smithing / Tailoring / Crafting / Art | 2 | 2 | 3 | 3 | 技能兜底 | Crafting 组分配共享 1 workCount |
 | 4 | 次级专业 | Handling / Fishing / Hunting | 1 | 2 | 4 | 4 | 0 | Hunting 需远程武器+后排排序 |
-| 5 | 研究 | Research / DarkStudy | 1 | 1 | 2 | 3 | 技能兜底 | 最后分配，专业工作<3者优先 |
+| 5 | 研究 | Research / DarkStudy | 1 | 1 | 1 | 3 | 技能兜底 | 最后分配，专业工作<3者优先 |
 | 6 | 辅助 | Hauling / Cleaning / BasicWorker 等 | — | 见辅助工作规则 | — | — | — | 不计入 workCount，按评级分档 |
 
 **top N 有火/无火**：保证人数内按三因子排序选取，有火者给"top N 有火"优先级，无火者给"top N 无火"优先级。
