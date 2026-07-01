@@ -456,7 +456,7 @@
 
 ### 统一四大原则
 
-所有技能类工作（关键/烹饪/手工类/狩猎类/其他普通技能/研究）共用统一分配 API，配置由 `WorkAllocationConfig` 结构编码：
+所有技能类工作（重要专业/普通专业/次级专业/研究）共用统一分配 API，配置由 `WorkAllocationConfig` 结构编码：
 
 1. **保证数量**：`GuaranteeCount` 确保至少 N 人承担（无论有无火），top N 内有火给 `GuaranteePassionatePriority`、无火给 `GuaranteeNonPassionatePriority`
 2. **三因子排序**：top N 人选按 Passion 降序 → SkillLevel 降序 → WorkCount 升序选择，保证数量内选兴趣最高、技能最强的
@@ -467,7 +467,7 @@
 
 **Crafting 技能组分配**：Crafting（制作）/Smithing（锻造）/Tailoring（缝制）三个工作类型都关联 Crafting 技能，通过 `AssignWorkGroup` **一次排序、同时分配**相同优先级，共享 1 个 workCount。避免分三次独立排序导致 workCount 变化影响后续排序、手工工作分散给不同人。
 
-**奴隶处理**：奴隶在专业工作中与殖民者同流程，按兴趣/技能参与分配，无特殊优先级。奴隶的特殊处理仅在服务类工作（搬运/清洁/非技能）中生效，见下方[服务类工作规则](#服务类工作规则搬运清洁非技能)。
+**奴隶处理**：奴隶与殖民者同流程，按兴趣/技能参与分配，无特殊优先级。辅助工作也按评级统一分档，无奴隶特殊处理。
 
 ### 分配规则
 
@@ -476,17 +476,11 @@
 | 顺序 | 工作分类 | 包含类型 | 保证人数 | top N 有火 | top N 无火 | 有火保底 | 无火兜底 | 特殊约束 |
 |------|---------|---------|---------|-----------|-----------|---------|---------|---------|
 | 1 | 紧急 | Firefighter / Patient / PatientBedRest | — | 全部 → 1 | 全部 → 1 | — | — | 不计入 workCount |
-| 2 | 关键 | Doctor / Warden / Childcare | 2 | 1 | 3 | 3 | 技能兜底 | — |
-| 3 | 烹饪 | Cooking | 1 | 1 | 2 | 3 | 0 | 生存关键，保证 1 人 priority≤2 |
-| 4 | 手工类（组分配） | Smithing / Tailoring / Crafting | 2 | 2 | 3 | 3 | 技能兜底 | `AssignWorkGroup` 一次排序同时分配三者，共享 1 个 workCount；手工专家优先于狩猎分配 |
-| 4 | 建造 | Construction | 2 | 2 | 3 | 3 | 技能兜底 | 独立于手工组（关联 Construction 技能） |
-| 5 | 狩猎 | Hunting | 2 | 2 | 2 | 4 | 技能兜底 | 需远程武器 + 后排排序 |
-| 5 | 钓鱼 | Fishing | 2 | 3 | 3 | 3 | 技能兜底 | 需远程武器 + 后排排序 |
-| 5 | 割除 | PlantCutting | 2 | 1 | 0 | 3 | 0 | — |
-| 5 | 种植 | Growing | 2 | 2 | 0 | 3 | 0 | — |
-| 6 | 其他普通技能 | Mining / Art / Handling 等 | 2 | 2 | 3 | 3 | 技能兜底 | — |
-| 7 | 研究 | Research | 1 | 1 | 2 | 4 | 技能兜底 | 最后分配，让手工专家先累加 workCount |
-| 8 | 服务类 | Hauling / Cleaning / BasicWorker 等 | — | 见下方服务类规则 | — | — | — | 不计入 workCount，奴隶优先 |
+| 2 | 重要专业 | Doctor / Warden / Childcare / Cooking / PlantCutting | 2 | 1 | 3 | 3 | 技能兜底 | — |
+| 3 | 普通专业 | Construction / Mining / Growing / Smithing / Tailoring / Crafting / Art | 2 | 2 | 3 | 3 | 技能兜底 | Crafting 组分配共享 1 workCount |
+| 4 | 次级专业 | Handling / Fishing / Hunting | 1 | 2 | 4 | 4 | 0 | Hunting 需远程武器+后排排序 |
+| 5 | 研究 | Research / DarkStudy | 1 | 1 | 2 | 3 | 技能兜底 | 最后分配，专业工作<3者优先 |
+| 6 | 辅助 | Hauling / Cleaning / BasicWorker 等 | — | 见辅助工作规则 | — | — | — | 不计入 workCount，按评级分档 |
 
 **top N 有火/无火**：保证人数内按三因子排序选取，有火者给"top N 有火"优先级，无火者给"top N 无火"优先级。
 
@@ -494,9 +488,7 @@
 
 **无火兜底**：超出保证人数的无火者，"技能兜底"表示按相关技能最高等级判定（≥12→2, ≥8→3, 否则 0，原则 4）；"0"表示直接禁用。
 
-**割除/种植特殊处理**：无火者（含 top N 内）一律 priority=0，仅在有足够有火者时才分配。设计意图：割除/种植无兴趣者效率极低且影响心情，不强制承担。
-
-**工作计数**：跟踪每 Pawn 的 priority ≤ 2 的专业工作数量（紧急/服务类不计入）。
+**工作计数**：跟踪每 Pawn 的 priority ≤ 2 的专业工作数量（紧急/辅助不计入）。
 用于「同等兴趣下优先安排其他工作少的」实现均衡负载。
 **硬上限**：每人最多 3 项 priority≤2 的专业工作，候选收集阶段跳过已满载者，候选不足时回退放宽（满载者降级至 Floor 保底，不抢占 Guarantee 优先级）。
 **Crafting 组分配**：Smithing/Tailoring/Crafting 三个工作类型通过 `AssignWorkGroup` 一次排序同时分配相同优先级，共享 1 个 workCount，视为 1 个专业工作。避免分三次独立排序导致 workCount 变化影响排序、手工工作分散给不同人。
@@ -504,28 +496,23 @@
 **三因子排序**：Passion 降序 → SkillLevel 降序 → WorkCount 升序。
 Passion 量化：None=0, Minor=1, Major=2。
 
-**后排角色优先**（仅狩猎）：通过 `RoleDetector.IsBackRow(role)` 判定，仅 `ArmorPreference.Flexible`（Shooter/Hunter/Leader）视为后排。
+**后排角色优先**（仅 Hunting）：通过 `RoleDetector.IsBackRow(role)` 判定，仅 `ArmorPreference.Flexible`（Shooter/Hunter/Leader）视为后排。
 设计意图：后排角色应优先承担狩猎以练习射击能力。
 
-**狩猎需远程武器**：候选收集阶段过滤 `pawn.equipment?.Primary?.def.IsRangedWeapon != true` 的殖民者（未装备武器 / 装备近战武器 / 装备非武器均排除）。
-设计意图：避免无兴趣低技能者被分配 priority=2 的狩猎工作（狩猎需远程武器才能进行）。优先级顺序不变（兴趣>等级仍由 `ComparePawnsForHunting` 保证）。
+**Hunting 需远程武器**：候选收集阶段过滤 `pawn.equipment?.Primary?.def.IsRangedWeapon != true` 的殖民者（未装备武器 / 装备近战武器 / 装备非武器均排除）。
+设计意图：避免无远程武器者被分配狩猎工作。Fishing 虽属次级专业但关联 Animals 技能，不要求远程武器。
 
-**循环依赖规避**：Hunting 始终设为 2 或 0，绝不设为 1，因此不会污染 `RoleDetector.DetectRole` 的 Hunter 判定（其依赖 Hunting priority == 1）。
+**循环依赖规避**：Hunting 始终设为 2 或 4，绝不设为 1，因此不会污染 `RoleDetector.DetectRole` 的 Hunter 判定（其依赖 Hunting priority == 1）。
 
-### 服务类工作规则（搬运/清洁/非技能）
+### 辅助工作规则（搬运/清洁/非技能）
 
-服务类工作（Hauling / Cleaning / BasicWorker 等无 relevantSkills 的工作）不使用 `WorkAllocationConfig`，而是采用独立的"保证基本数量"原则，按 **奴隶优先 → 评级升序（最低档在前）→ 工作计数升序** 排序后依次判定：
+辅助工作（Hauling / Cleaning / BasicWorker 等无 relevantSkills 的工作）不使用 `WorkAllocationConfig`，按 `CombatTier` 评级分档分配：
 
-1. **奴隶均 priority=1**：所有奴隶殖民者强制 priority=1（奴隶承担服务类工作）
-2. **保底 1 人 priority=1**：若尚无 priority=1 者，排序首位非奴隶（即评级最低者）priority=1
-3. **工作计数 < 3 → priority=1**：其他优先 1/2 工作数量少于 3 的殖民者 priority=1（均衡负载，让工作少的承担服务类）
-4. **按评级分档**：以上均不满足者按 `CombatTier` 分档：SSS/SS/S=4, A/B/C=3, D/X=1（高价值殖民者少做服务类工作）
+- **评级 SSS/SS/S → priority=4**：高价值殖民者少做辅助工作
+- **评级 A → priority=3**
+- **评级 B/C/D/X → priority=1**
 
-**设计意图**：
-- 奴隶优先承担服务类工作（受限工作类型多，适合体力劳动）
-- 评级低者优先（高价值殖民者应专注技能工作）
-- 工作计数少者优先（均衡负载，避免少数人承担过多服务类工作）
-- 服务类工作不计入 workCount（避免污染后续技能工作的均衡负载计算）
+辅助工作不计入 workCount（避免污染技能工作的均衡负载计算）。
 
 ### 自定义优先级自动启用
 

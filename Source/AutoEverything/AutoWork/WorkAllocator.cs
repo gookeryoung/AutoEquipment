@@ -9,7 +9,7 @@ namespace AutoEverything.AutoWork
 {
     /// <summary>
     /// 全局工作优先级分配器。
-    /// 按工作分类（紧急/关键/狩猎类/研究/普通技能/杂物/非技能）多遍协调分配，
+    /// 按工作分类（紧急/重要专业/普通专业/次级专业/研究/辅助）多遍协调分配，
     /// 引入工作计数跟踪使「同等兴趣下优先安排其他工作少的」可执行。
     /// 所有技能类工作复用统一 AssignWorkType + WorkAllocationConfig 四大原则分配。
     /// 触发方式：ITab 底部"全局工作重配"按钮手动调用。
@@ -30,8 +30,8 @@ namespace AutoEverything.AutoWork
         // 每次狩猎分配前 Clear+重填，仅在该次 Sort 内有效
         private static readonly Dictionary<Pawn, bool> backRowCache = new Dictionary<Pawn, bool>();
 
-        // 服务类工作排序缓存：CombatTier 预计算，避免 Sort 比较器内重复调用 GetCombatTier
-        // 每次服务类分配前 Clear+重填，仅在该次 Sort 内有效
+        // 辅助工作评级缓存：CombatTier 预计算，避免重复调用 GetCombatTier
+        // 每次辅助工作分配前 Clear+重填
         private static readonly Dictionary<Pawn, CombatTier> tierCache = new Dictionary<Pawn, CombatTier>();
 
         // workCount 硬上限：每人最多承担 N 项 priority≤2 的专业工作，超限者跳过候选
@@ -42,7 +42,7 @@ namespace AutoEverything.AutoWork
         // 工作分配配置（静态只读，避免每次分配重复构造）
         // ════════════════════════════════════════════════════════════
 
-        // 关键工作（Doctor/Warden/Childcare）：保证 2 人，有火 top2→1，无火 top2→3，有火保底 3，无火技能兜底
+        // 重要专业工作（Doctor/Warden/Childcare/Cooking/PlantCutting）：保底2，三因素高者1低者3
         private static readonly WorkAllocationConfig KeyWorkConfig = new WorkAllocationConfig
         {
             GuaranteeCount = 2,
@@ -55,20 +55,7 @@ namespace AutoEverything.AutoWork
             UseBackRowSort = false
         };
 
-        // 烹饪：保证 1 人 priority≤2，有火 top1→1，无火 top1→2，有火保底 3，无火→0
-        private static readonly WorkAllocationConfig CookingConfig = new WorkAllocationConfig
-        {
-            GuaranteeCount = 1,
-            GuaranteePassionatePriority = 1,
-            GuaranteeNonPassionatePriority = 2,
-            FloorPassionatePriority = 3,
-            UseSkillFloorForNonPassionate = false,
-            FloorNonPassionatePriority = 0,
-            RequireRangedWeapon = false,
-            UseBackRowSort = false
-        };
-
-        // 普通技能（手工类+其他）：保证 2 人，有火 top2→2，无火 top2→3，有火保底 3，无火技能兜底
+        // 普通专业工作（Construction/Mining/Growing/Smithing/Tailoring/Crafting/Art）：保底2，三因素高者2低者3
         private static readonly WorkAllocationConfig OtherSkillConfig = new WorkAllocationConfig
         {
             GuaranteeCount = 2,
@@ -81,65 +68,39 @@ namespace AutoEverything.AutoWork
             UseBackRowSort = false
         };
 
-        // 狩猎：需远程武器+后排排序，保证 2 人 top2→2，有火保底 4，无火技能兜底
-        private static readonly WorkAllocationConfig HuntingConfig = new WorkAllocationConfig
+        // 次级专业工作-普通类（Handling/Fishing）：保底1，三因素高者2低者4
+        private static readonly WorkAllocationConfig SecondaryConfig = new WorkAllocationConfig
         {
-            GuaranteeCount = 2,
+            GuaranteeCount = 1,
             GuaranteePassionatePriority = 2,
-            GuaranteeNonPassionatePriority = 2,
+            GuaranteeNonPassionatePriority = 4,
             FloorPassionatePriority = 4,
-            UseSkillFloorForNonPassionate = true,
-            FloorNonPassionatePriority = 0,
-            RequireRangedWeapon = true,
-            UseBackRowSort = true
-        };
-
-        // 钓鱼：需远程武器+后排排序，保证 2 人 top2→3，有火保底 3，无火技能兜底
-        private static readonly WorkAllocationConfig FishingConfig = new WorkAllocationConfig
-        {
-            GuaranteeCount = 2,
-            GuaranteePassionatePriority = 3,
-            GuaranteeNonPassionatePriority = 3,
-            FloorPassionatePriority = 3,
-            UseSkillFloorForNonPassionate = true,
-            FloorNonPassionatePriority = 0,
-            RequireRangedWeapon = true,
-            UseBackRowSort = true
-        };
-
-        // 割除：有火 top2→1，有火保底 3，无火→0
-        private static readonly WorkAllocationConfig PlantCuttingConfig = new WorkAllocationConfig
-        {
-            GuaranteeCount = 2,
-            GuaranteePassionatePriority = 1,
-            GuaranteeNonPassionatePriority = 0,
-            FloorPassionatePriority = 3,
             UseSkillFloorForNonPassionate = false,
             FloorNonPassionatePriority = 0,
             RequireRangedWeapon = false,
             UseBackRowSort = false
         };
 
-        // 种植：有火 top2→2，有火保底 3，无火→0
-        private static readonly WorkAllocationConfig GrowingConfig = new WorkAllocationConfig
+        // 次级专业工作-远程类（Hunting）：保底1，三因素高者2低者4，需远程武器+后排排序
+        private static readonly WorkAllocationConfig SecondaryRangedConfig = new WorkAllocationConfig
         {
-            GuaranteeCount = 2,
+            GuaranteeCount = 1,
             GuaranteePassionatePriority = 2,
-            GuaranteeNonPassionatePriority = 0,
-            FloorPassionatePriority = 3,
+            GuaranteeNonPassionatePriority = 4,
+            FloorPassionatePriority = 4,
             UseSkillFloorForNonPassionate = false,
             FloorNonPassionatePriority = 0,
-            RequireRangedWeapon = false,
-            UseBackRowSort = false
+            RequireRangedWeapon = true,
+            UseBackRowSort = true
         };
 
-        // 研究：保证 1 人，top1→1，有火保底 4，无火技能兜底
+        // 研究工作（Research/DarkStudy）：保底1，专业工作<3的三因素最高者1，其他有火者3
         private static readonly WorkAllocationConfig ResearchConfig = new WorkAllocationConfig
         {
             GuaranteeCount = 1,
             GuaranteePassionatePriority = 1,
             GuaranteeNonPassionatePriority = 2,
-            FloorPassionatePriority = 4,
+            FloorPassionatePriority = 3,
             UseSkillFloorForNonPassionate = true,
             FloorNonPassionatePriority = 0,
             RequireRangedWeapon = false,
@@ -165,9 +126,10 @@ namespace AutoEverything.AutoWork
         private static readonly List<WorkTypeDef> otherSkillWorkDefs = new List<WorkTypeDef>();
         private static WorkTypeDef cachedHuntingDef;
         private static WorkTypeDef cachedFishingDef;
+        private static WorkTypeDef cachedHandlingDef;
         private static WorkTypeDef cachedResearchDef;
+        private static WorkTypeDef cachedDarkStudyDef;
         private static WorkTypeDef cachedPlantCuttingDef;
-        private static WorkTypeDef cachedGrowingDef;
         private static WorkTypeDef cachedCookingDef;
 
         /// <summary>
@@ -176,8 +138,7 @@ namespace AutoEverything.AutoWork
         /// 2. 三因子排序选 guarantee 人选（passion desc → skill desc → workCount asc）
         /// 3. FloorPassionatePriority：有火者超出 guarantee 部分至少给此保底优先级
         /// 4. UseSkillFloorForNonPassionate：无火者超出 guarantee 部分按技能兜底（≥12→2, ≥8→3, 否则 FloorNonPassionatePriority）
-        /// 注：奴隶在专业工作中与殖民者同流程（按兴趣/技能参与分配），
-        /// 奴隶的特殊处理仅在服务类工作（搬运/清洁/非技能）中生效，见 AssignServiceWorkType。
+        /// 注：奴隶与殖民者同流程，按兴趣/技能参与分配，无特殊优先级。
         /// </summary>
         private struct WorkAllocationConfig
         {
@@ -244,7 +205,7 @@ namespace AutoEverything.AutoWork
             AEDebug.Log(() => $"[WorkAllocator] === ReallocateAll start (pawns={candidatePawns.Count}) ===");
 
             // 5. 多遍分配（顺序严格固定，前排分配结果影响后排候选排序）
-            // 阶段列表驱动：关键 → 烹饪 → 手工类 → 狩猎类 → 其他普通技能 → 研究
+            // 阶段列表驱动：紧急 → 重要专业 → 普通专业 → 次级专业 → 研究
             // 手工类使用组分配：Smithing/Tailoring/Crafting 一次排序同时分配，共享 1 个 workCount
             AssignEmergencyPriorities();          // 第 1 遍：紧急工作
             for (int i = 0; i < skillWorkPhases.Count; i++)  // 第 2-N 遍：技能工作
@@ -255,7 +216,7 @@ namespace AutoEverything.AutoWork
                 else
                     AssignWorkType(phase.WorkType, phase.Config);
             }
-            AssignServiceWorkPriorities();        // 最后一遍：服务类（搬运/清洁/非技能）
+            AssignServiceWorkPriorities();        // 最后一遍：辅助工作（搬运/清洁/非技能）
 
             // 调试：dump 最终 workCount，便于分析硬上限拦截是否影响双火 pawn
             AEDebug.Log(() =>
@@ -276,7 +237,7 @@ namespace AutoEverything.AutoWork
 
         /// <summary>
         /// 懒加载并按 defName/WorkTags 分类 WorkTypeDef（仅执行一次）。
-        /// 分类：紧急（运行时判定）/ 关键 / 烹饪 / 狩猎类 / 研究 / 普通技能 / 服务类（搬运/清洁/非技能）。
+        /// 分类：紧急（运行时判定）/ 重要专业 / 普通专业 / 次级专业 / 研究 / 辅助（搬运/清洁/非技能）。
         /// </summary>
         private static void CacheAndClassifyWorkTypes()
         {
@@ -287,34 +248,34 @@ namespace AutoEverything.AutoWork
             {
                 WorkTypeDef wt = cachedWorkTypes[i];
 
-                // 关键工作白名单（defName 判断，避免 WorkTags 漏掉 Warden——其 workTags 仅 Social/AllWork 无 Caring）
+                // 重要专业工作白名单（Doctor/Warden/Childcare，defName 判断避免 WorkTags 漏掉 Warden）
                 if (wt.defName == "Doctor" || wt.defName == "Warden" || wt.defName == "Childcare")
                 {
                     keyWorkDefs.Add(wt);
                     continue;
                 }
+                // 重要专业工作（Cooking/PlantCutting）单独缓存以便控制阶段顺序
+                if (wt.defName == "Cooking") { cachedCookingDef = wt; continue; }
+                if (wt.defName == "PlantCutting") { cachedPlantCuttingDef = wt; continue; }
 
-                // 狩猎类：Hunting + Fishing + PlantCutting + Growing
+                // 次级专业工作（Handling/Hunting/Fishing）
+                if (wt.defName == "Handling") { cachedHandlingDef = wt; continue; }
                 if (wt.defName == "Hunting") { cachedHuntingDef = wt; continue; }
                 if (wt.defName == "Fishing") { cachedFishingDef = wt; continue; }
-                if (wt.defName == "PlantCutting") { cachedPlantCuttingDef = wt; continue; }
-                if (wt.defName == "Growing") { cachedGrowingDef = wt; continue; }
 
-                // 烹饪：升格为关键工作（生存关键，保证 1 人 priority≤2）
-                if (wt.defName == "Cooking") { cachedCookingDef = wt; continue; }
-
-                // 研究
+                // 研究工作（Research/DarkStudy）
                 if (wt.defName == "Research") { cachedResearchDef = wt; continue; }
+                if (wt.defName == "DarkStudy") { cachedDarkStudyDef = wt; continue; }
 
-                // 搬运/清洁（最后一遍运行时按 defName 判定，不进列表）
+                // 辅助工作（最后一遍运行时按 defName 判定，不进列表）
                 if (wt.defName == "Hauling" || wt.defName == "Cleaning") continue;
 
-                // 其他技能工作：有 relevantSkills 且非上述类别
+                // 普通专业工作：有 relevantSkills 且非上述类别（Construction/Mining/Growing/Smithing/Tailoring/Crafting/Art 等）
                 if (wt.relevantSkills != null && wt.relevantSkills.Count > 0)
                 {
                     otherSkillWorkDefs.Add(wt);
                 }
-                // 非技能工作（如 BasicWorker）由第 7 遍运行时遍历 cachedWorkTypes 兜底处理
+                // 非技能工作（如 BasicWorker）由最后一遍运行时遍历 cachedWorkTypes 兜底处理
             }
 
             // 构建分配阶段列表（顺序决定 workCount 累加次序，影响后续硬上限拦截）
@@ -323,7 +284,7 @@ namespace AutoEverything.AutoWork
 
         /// <summary>
         /// 构建技能工作分配阶段列表。
-        /// 顺序：关键 → 烹饪 → 手工类 → 狩猎类 → 其他普通技能 → 研究
+        /// 顺序：重要专业 → 普通专业 → 次级专业 → 研究
         /// 手工类（Smithing/Tailoring/Crafting）使用组分配：一次排序、同时分配、共享 1 个 workCount，
         /// 避免分三次排序导致 workCount 变化影响后续排序、手工工作分散给不同人。
         /// </summary>
@@ -331,49 +292,43 @@ namespace AutoEverything.AutoWork
         {
             skillWorkPhases = new List<WorkPhase>();
 
-            // 关键工作（Doctor/Warden/Childcare）
+            // 1. 重要专业工作（Doctor/Warden/Childcare/Cooking/PlantCutting）：保底2，三因素高者1低者3
             for (int i = 0; i < keyWorkDefs.Count; i++)
                 skillWorkPhases.Add(new WorkPhase { WorkType = keyWorkDefs[i], Config = KeyWorkConfig });
-
-            // 烹饪：生存关键，保证 1 人 priority≤2
             if (cachedCookingDef != null)
-                skillWorkPhases.Add(new WorkPhase { WorkType = cachedCookingDef, Config = CookingConfig });
+                skillWorkPhases.Add(new WorkPhase { WorkType = cachedCookingDef, Config = KeyWorkConfig });
+            if (cachedPlantCuttingDef != null)
+                skillWorkPhases.Add(new WorkPhase { WorkType = cachedPlantCuttingDef, Config = KeyWorkConfig });
 
-            // 手工类：Construction 单独阶段 + Crafting 组（Smithing/Tailoring/Crafting）组分配
-            // 组分配保证三个手工工作一次排序同时分给同一批人，共享 1 个 workCount
+            // 2. 普通专业工作（Construction/Mining/Growing/Smithing/Tailoring/Crafting/Art）：保底2，三因素高者2低者3
+            // 手工组（Smithing/Tailoring/Crafting）使用组分配（共享 Crafting 技能 + 1 workCount）
             List<WorkTypeDef> craftingGroup = new List<WorkTypeDef>();
             for (int i = 0; i < otherSkillWorkDefs.Count; i++)
             {
                 WorkTypeDef wt = otherSkillWorkDefs[i];
                 if (IsCraftingSkillWork(wt))
                     craftingGroup.Add(wt);
-                else if (wt.defName == "Construction")
+                else
                     skillWorkPhases.Add(new WorkPhase { WorkType = wt, Config = OtherSkillConfig });
             }
             if (craftingGroup.Count > 0)
                 skillWorkPhases.Add(new WorkPhase { WorkTypes = craftingGroup, Config = OtherSkillConfig });
 
-            // 狩猎类（Hunting/Fishing/PlantCutting/Growing）
-            if (cachedHuntingDef != null)
-                skillWorkPhases.Add(new WorkPhase { WorkType = cachedHuntingDef, Config = HuntingConfig });
+            // 3. 次级专业工作（Handling/Fishing/Hunting）：保底1，三因素高者2低者4
+            // Hunting 需远程武器+后排排序；Handling/Fishing 不需要（Fishing 关联 Animals 技能，非远程武器工作）
+            if (cachedHandlingDef != null)
+                skillWorkPhases.Add(new WorkPhase { WorkType = cachedHandlingDef, Config = SecondaryConfig });
             if (cachedFishingDef != null)
-                skillWorkPhases.Add(new WorkPhase { WorkType = cachedFishingDef, Config = FishingConfig });
-            if (cachedPlantCuttingDef != null)
-                skillWorkPhases.Add(new WorkPhase { WorkType = cachedPlantCuttingDef, Config = PlantCuttingConfig });
-            if (cachedGrowingDef != null)
-                skillWorkPhases.Add(new WorkPhase { WorkType = cachedGrowingDef, Config = GrowingConfig });
+                skillWorkPhases.Add(new WorkPhase { WorkType = cachedFishingDef, Config = SecondaryConfig });
+            if (cachedHuntingDef != null)
+                skillWorkPhases.Add(new WorkPhase { WorkType = cachedHuntingDef, Config = SecondaryRangedConfig });
 
-            // 其他普通技能（Mining/Art/Handling 等）
-            for (int i = 0; i < otherSkillWorkDefs.Count; i++)
-            {
-                WorkTypeDef wt = otherSkillWorkDefs[i];
-                if (!IsCraftingSkillWork(wt) && wt.defName != "Construction")
-                    skillWorkPhases.Add(new WorkPhase { WorkType = wt, Config = OtherSkillConfig });
-            }
-
-            // 研究：最后分配，让手工专家先累加 workCount，研究时硬上限拦截
+            // 4. 研究工作（Research/DarkStudy）：保底1，专业工作<3的三因素最高者1，其他有火者3
+            // 最后分配，让其他专家先累加 workCount，研究时硬上限拦截
             if (cachedResearchDef != null)
                 skillWorkPhases.Add(new WorkPhase { WorkType = cachedResearchDef, Config = ResearchConfig });
+            if (cachedDarkStudyDef != null)
+                skillWorkPhases.Add(new WorkPhase { WorkType = cachedDarkStudyDef, Config = ResearchConfig });
 
             // 调试：dump 阶段列表，确认所有工作类型（如 Mining）被正确纳入
             AEDebug.Log(() =>
@@ -456,12 +411,8 @@ namespace AutoEverything.AutoWork
         }
 
         // ════════════════════════════════════════════════════════════
-        // 最后一遍：服务类工作（搬运/清洁/非技能 BasicWorker 等，不计入 workCount）
-        //   排序：奴隶优先 → 评级升序（最低档在前）→ 工作计数升序
-        //   规则：1.奴隶均 priority=1
-        //         2.保底 1 人 priority=1（排序首位非奴隶，即评级最低者）
-        //         3.工作计数 < 3 的 priority=1（均衡负载）
-        //         4.以上均不满足时按评级分档（S+=4, A/B/C=3, D/X=1）
+        // 最后一遍：辅助工作（搬运/清洁/非技能 BasicWorker 等，不计入 workCount）
+        //   规则：评级 S+→4，A→3，其余→1（高价值殖民者少做辅助工作）
         // ════════════════════════════════════════════════════════════
 
         private static void AssignServiceWorkPriorities()
@@ -490,7 +441,7 @@ namespace AutoEverything.AutoWork
             }
             if (workCandidates.Count == 0) return;
 
-            // 预计算评级缓存，避免 Sort 比较器内重复调用 GetCombatTier
+            // 预计算评级缓存，避免重复调用 GetCombatTier
             tierCache.Clear();
             for (int i = 0; i < workCandidates.Count; i++)
             {
@@ -498,77 +449,23 @@ namespace AutoEverything.AutoWork
                 tierCache[p] = CombatEvaluator.GetCombatTier(p);
             }
 
-            // 排序：奴隶优先 → 评级升序（最低档在前）→ 工作计数升序
-            workCandidates.Sort(ComparePawnsForServiceWork);
-
-            bool guaranteedOne = false;
+            // 新规则：评级 S+→4，A→3，其余→1（无需排序，直接按评级分档）
             for (int i = 0; i < workCandidates.Count; i++)
             {
                 Pawn pawn = workCandidates[i];
+                CombatTier tier = tierCache[pawn];
                 int priority;
-
-                if (DLCCompat.IsSlave(pawn))
+                switch (tier)
                 {
-                    // 规则 1：奴隶均 priority=1
-                    priority = 1;
-                    guaranteedOne = true;
+                    case CombatTier.SSS:
+                    case CombatTier.SS:
+                    case CombatTier.S: priority = 4; break;
+                    case CombatTier.A: priority = 3; break;
+                    default: priority = 1; break; // B/C/D/X
                 }
-                else if (!guaranteedOne)
-                {
-                    // 规则 2+4：保底 1 人 priority=1（排序首位非奴隶，即评级最低者）
-                    priority = 1;
-                    guaranteedOne = true;
-                }
-                else if (workCount[pawn] < 3)
-                {
-                    // 规则 3：其他优先 1/2 工作数量少于 3 的 priority=1（均衡负载）
-                    priority = 1;
-                }
-                else
-                {
-                    // 兜底：按评级分档（高价值殖民者少做服务类工作）
-                    CombatTier tier = tierCache[pawn];
-                    switch (tier)
-                    {
-                        case CombatTier.SSS:
-                        case CombatTier.SS:
-                        case CombatTier.S: priority = 4; break;
-                        case CombatTier.A:
-                        case CombatTier.B:
-                        case CombatTier.C: priority = 3; break;
-                        default: priority = 1; break; // D/X
-                    }
-                }
-
                 pawn.workSettings.SetPriority(workType, priority);
-                // 服务类工作不计入 workCount
+                // 辅助工作不计入 workCount
             }
-        }
-
-        /// <summary>
-        /// 服务类工作专用比较器：奴隶优先 → 评级升序（最低档在前）→ 工作计数升序。
-        /// 设计意图：奴隶承担服务类工作（受限工作类型多），
-        ///   评级低者优先（高价值殖民者应专注技能工作），
-        ///   工作计数少者优先（均衡负载）。
-        /// 注：评级结果由调用方预计算存入 tierCache，避免比较器内重复调用 GetCombatTier。
-        /// </summary>
-        private static int ComparePawnsForServiceWork(Pawn a, Pawn b)
-        {
-            // 1. 奴隶优先（true 排前）
-            bool slaveA = DLCCompat.IsSlave(a);
-            bool slaveB = DLCCompat.IsSlave(b);
-            if (slaveA != slaveB) return slaveB.CompareTo(slaveA);
-
-            // 2. 评级升序（最低档在前，X=0 → SSS=7）
-            CombatTier tierA = tierCache.TryGetValue(a, out CombatTier ta) ? ta : CombatTier.X;
-            CombatTier tierB = tierCache.TryGetValue(b, out CombatTier tb) ? tb : CombatTier.X;
-            int tierCompare = ((int)tierA).CompareTo((int)tierB);
-            if (tierCompare != 0) return tierCompare;
-
-            // 3. 工作计数升序（工作少者优先）
-            int countA = workCount[a];
-            int countB = workCount[b];
-            return countA.CompareTo(countB);
         }
 
         // ════════════════════════════════════════════════════════════
