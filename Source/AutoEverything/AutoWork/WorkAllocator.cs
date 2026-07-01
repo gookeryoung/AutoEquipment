@@ -9,8 +9,9 @@ namespace AutoEverything.AutoWork
 {
     /// <summary>
     /// 全局工作优先级分配器。
-    /// 按工作分类（紧急/关键/狩猎/研究/普通技能/杂物/非技能）多遍协调分配，
+    /// 按工作分类（紧急/关键/狩猎类/研究/普通技能/杂物/非技能）多遍协调分配，
     /// 引入工作计数跟踪使「同等兴趣下优先安排其他工作少的」可执行。
+    /// 所有技能类工作复用统一 AssignWorkType + WorkAllocationConfig 四大原则分配。
     /// 触发方式：ITab 底部"全局工作重配"按钮手动调用。
     /// </summary>
     public static class WorkAllocator
@@ -36,6 +37,27 @@ namespace AutoEverything.AutoWork
         private static WorkTypeDef cachedHuntingDef;
         private static WorkTypeDef cachedFishingDef;
         private static WorkTypeDef cachedResearchDef;
+        private static WorkTypeDef cachedPlantCuttingDef;
+        private static WorkTypeDef cachedGrowingDef;
+
+        /// <summary>
+        /// 工作分配配置：统一描述各工作类型的优先级规则，编码四大原则。
+        /// 1. GuaranteeCount：保证至少 N 人承担（无论有无火），top N 内有火/无火分别给 GuaranteePassionate/GuaranteeNonPassionate
+        /// 2. 三因子排序选 guarantee 人选（passion desc → skill desc → workCount asc）
+        /// 3. FloorPassionatePriority：有火者超出 guarantee 部分至少给此保底优先级
+        /// 4. UseSkillFloorForNonPassionate：无火者超出 guarantee 部分按技能兜底（≥12→2, ≥8→3, 否则 FloorNonPassionatePriority）
+        /// </summary>
+        private struct WorkAllocationConfig
+        {
+            public int GuaranteeCount;                  // 保证人数
+            public int GuaranteePassionatePriority;     // top N 内有火优先级
+            public int GuaranteeNonPassionatePriority;  // top N 内无火优先级
+            public int FloorPassionatePriority;         // 超出 top N 的有火保底优先级
+            public bool UseSkillFloorForNonPassionate;  // 超出 top N 的无火者是否启用技能兜底
+            public int FloorNonPassionatePriority;      // 超出 top N 的无火者优先级（不启用技能兜底时直接用）
+            public bool RequireRangedWeapon;            // 是否要求持有远程武器（狩猎类）
+            public bool UseBackRowSort;                 // 是否启用后排优先排序（狩猎类）
+        }
 
         /// <summary>
         /// 全局工作优先级重配入口。
@@ -90,7 +112,7 @@ namespace AutoEverything.AutoWork
             // 5. 多遍分配（顺序严格固定，前排分配结果影响后排候选排序）
             AssignEmergencyPriorities();          // 第 1 遍：紧急工作
             AssignKeyWorkPriorities();            // 第 2 遍：关键工作（Doctor/Warden/Childcare）
-            AssignHuntingPriorities();            // 第 3 遍：狩猎（含 Fishing）
+            AssignHuntingPriorities();            // 第 3 遍：狩猎类（Hunting/Fishing/PlantCutting/Growing）
             AssignResearchPriorities();           // 第 4 遍：研究
             AssignOtherSkillWorkPriorities();     // 第 5 遍：其他技能工作
             AssignHaulingCleaningPriorities();    // 第 6 遍：搬运/清洁
@@ -101,7 +123,7 @@ namespace AutoEverything.AutoWork
 
         /// <summary>
         /// 懒加载并按 defName/WorkTags 分类 WorkTypeDef（仅执行一次）。
-        /// 分类：紧急（运行时判定）/ 关键 / 狩猎 / 研究 / 普通技能 / 杂务 / 非技能。
+        /// 分类：紧急（运行时判定）/ 关键 / 狩猎类 / 研究 / 普通技能 / 杂务 / 非技能。
         /// </summary>
         private static void CacheAndClassifyWorkTypes()
         {
@@ -119,9 +141,11 @@ namespace AutoEverything.AutoWork
                     continue;
                 }
 
-                // 狩猎：Hunting + Fishing（Fishing 多由 mod 添加，不存在则跳过）
+                // 狩猎类：Hunting + Fishing + PlantCutting + Growing
                 if (wt.defName == "Hunting") { cachedHuntingDef = wt; continue; }
                 if (wt.defName == "Fishing") { cachedFishingDef = wt; continue; }
+                if (wt.defName == "PlantCutting") { cachedPlantCuttingDef = wt; continue; }
+                if (wt.defName == "Growing") { cachedGrowingDef = wt; continue; }
 
                 // 研究
                 if (wt.defName == "Research") { cachedResearchDef = wt; continue; }
@@ -171,257 +195,148 @@ namespace AutoEverything.AutoWork
 
         // ════════════════════════════════════════════════════════════
         // 第 2 遍：关键工作（Doctor/Warden/Childcare）
-        //   - 有兴趣 → priority=1，计入 workCount
-        //   - 无兴趣 → priority=3（备选，不计入 workCount）
+        //   保证 2 人，有火 top2→1，无火 top2→3，有火保底 3，无火技能兜底
         // ════════════════════════════════════════════════════════════
 
         private static void AssignKeyWorkPriorities()
         {
+            WorkAllocationConfig config = new WorkAllocationConfig
+            {
+                GuaranteeCount = 2,
+                GuaranteePassionatePriority = 1,
+                GuaranteeNonPassionatePriority = 3,
+                FloorPassionatePriority = 3,
+                UseSkillFloorForNonPassionate = true,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = false,
+                UseBackRowSort = false
+            };
             for (int i = 0; i < keyWorkDefs.Count; i++)
             {
-                AssignKeyWorkType(keyWorkDefs[i]);
-            }
-        }
-
-        private static void AssignKeyWorkType(WorkTypeDef workType)
-        {
-            workCandidates.Clear();
-            for (int i = 0; i < candidatePawns.Count; i++)
-            {
-                Pawn pawn = candidatePawns[i];
-                if (pawn.WorkTagIsDisabled(workType.workTags)) continue;
-                workCandidates.Add(pawn);
-            }
-
-            if (workCandidates.Count == 0) return;
-
-            // 三因子排序
-            workCandidates.Sort((a, b) =>ComparePawnsByPassionWorkCountSkill(a, b, workType.relevantSkills));
-
-            // 所有人按是否有火区分：有火→1，无火→3
-            // 所有人按是否有火区分：有火→1，无火→3
-            // 设计意图：关键工作（医疗/监管/育儿）容错性高，有火者全部优先承担，无火者兜底备选
-            for (int i = 0; i < workCandidates.Count; i++)
-            {
-                Pawn pawn = workCandidates[i];
-                int priority;
-
-                if (i < 2) {
-                    priority = HasPassionForAnySkill(pawn, workType.relevantSkills) ? 1 : 3;
-                } else {
-                    if (HasPassionForAnySkill(pawn, workType.relevantSkills)) {
-                        priority = 3;
-                    } else {
-                        // 技能等级兜底
-                        priority = GetSkillFloorPriority(pawn, workType.relevantSkills);
-                    }
-                }
-
-                pawn.workSettings.SetPriority(workType, priority);
-                if (priority <= 2) workCount[pawn]++;
+                AssignWorkType(keyWorkDefs[i], config);
             }
         }
 
         // ════════════════════════════════════════════════════════════
-        // 第 3 遍：狩猎（Hunting + Fishing）
-        //   - 候选排序：后排优先 → passion desc → skill desc → workCount asc
-        //   - Hunting：top 2 → priority=2，其余有兴趣 → 4，其余无兴趣 → 0
-        //   - Fishing：top 2 → priority=3，其余 → 0
+        // 第 3 遍：狩猎类（Hunting/Fishing/PlantCutting/Growing）
+        //   Hunting：需远程武器+后排排序，保证 2 人 top2→2，有火保底 4，无火技能兜底
+        //   Fishing：需远程武器+后排排序，保证 2 人 top2→3，有火保底 3，无火技能兜底
+        //   PlantCutting：保证 2 人，有火 top2→1，有火保底 3，无火→0
+        //   Growing：保证 2 人，有火 top2→2，有火保底 3，无火→0
         // ════════════════════════════════════════════════════════════
 
         private static void AssignHuntingPriorities()
         {
+            // Hunting：需远程武器 + 后排排序，top2→2，有火保底 4，无火技能兜底
+            WorkAllocationConfig huntingConfig = new WorkAllocationConfig
+            {
+                GuaranteeCount = 2,
+                GuaranteePassionatePriority = 2,
+                GuaranteeNonPassionatePriority = 2,
+                FloorPassionatePriority = 4,
+                UseSkillFloorForNonPassionate = true,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = true,
+                UseBackRowSort = true
+            };
             if (cachedHuntingDef != null)
-                AssignHuntingType(cachedHuntingDef, isFishing: false);
+                AssignWorkType(cachedHuntingDef, huntingConfig);
+
+            // Fishing：需远程武器 + 后排排序，top2→3，有火保底 3，无火技能兜底
+            WorkAllocationConfig fishingConfig = new WorkAllocationConfig
+            {
+                GuaranteeCount = 2,
+                GuaranteePassionatePriority = 3,
+                GuaranteeNonPassionatePriority = 3,
+                FloorPassionatePriority = 3,
+                UseSkillFloorForNonPassionate = true,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = true,
+                UseBackRowSort = true
+            };
             if (cachedFishingDef != null)
-                AssignHuntingType(cachedFishingDef, isFishing: true);
-        }
+                AssignWorkType(cachedFishingDef, fishingConfig);
 
-        private static void AssignHuntingType(WorkTypeDef workType, bool isFishing)
-        {
-            workCandidates.Clear();
-            for (int i = 0; i < candidatePawns.Count; i++)
+            // PlantCutting（割除）：有火 top2→1，有火保底 3，无火→0
+            WorkAllocationConfig cuttingConfig = new WorkAllocationConfig
             {
-                Pawn pawn = candidatePawns[i];
-                if (pawn.WorkTagIsDisabled(workType.workTags)) continue;
-                // 狩猎需远程武器：避免无兴趣低技能者被分配高优先级
-                // 优先级顺序不变（兴趣>等级仍由 ComparePawnsForHunting 保证）
-                if (pawn.equipment?.Primary?.def.IsRangedWeapon != true) continue;
-                workCandidates.Add(pawn);
-            }
-            if (workCandidates.Count == 0) return;
+                GuaranteeCount = 2,
+                GuaranteePassionatePriority = 1,
+                GuaranteeNonPassionatePriority = 0,
+                FloorPassionatePriority = 3,
+                UseSkillFloorForNonPassionate = false,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = false,
+                UseBackRowSort = false
+            };
+            if (cachedPlantCuttingDef != null)
+                AssignWorkType(cachedPlantCuttingDef, cuttingConfig);
 
-            // 排序：后排优先 → passion desc → skill desc → workCount asc
-            // 预计算 IsBackRow 缓存，避免 Sort 比较器内重复调用 DetectRole（性能优化）
-            backRowCache.Clear();
-            for (int i = 0; i < workCandidates.Count; i++)
+            // Growing（种植）：有火 top2→2，有火保底 3，无火→0
+            WorkAllocationConfig growingConfig = new WorkAllocationConfig
             {
-                Pawn p = workCandidates[i];
-                backRowCache[p] = RoleDetector.IsBackRow(RoleDetector.DetectRole(p));
-            }
-            workCandidates.Sort((a, b) => ComparePawnsForHunting(a, b, workType.relevantSkills));
-
-            if (isFishing)
-            {
-                // Fishing：top 2 → priority=3，其余 → 技能兜底（≥8→3，否则 0）
-                for (int i = 0; i < workCandidates.Count; i++)
-                {
-                    Pawn pawn = workCandidates[i];
-                    int priority = i < 2 ? 3 : GetSkillFloorPriority(pawn, workType.relevantSkills);
-                    pawn.workSettings.SetPriority(workType, priority);
-                    if (priority <= 2) workCount[pawn]++;
-                }
-            }
-            else
-            {
-                // Hunting：top 2 → priority=2，其余有兴趣 → priority=4（备选），其余无兴趣 → 技能兜底（≥8→3，否则 0）
-                for (int i = 0; i < workCandidates.Count; i++)
-                {
-                    Pawn pawn = workCandidates[i];
-                    int priority;
-                    if (i < 2)
-                    {
-                        priority = 2;
-                    }
-                    else if (HasPassionForAnySkill(pawn, workType.relevantSkills))
-                    {
-                        priority = 4;
-                    }
-                    else
-                    {
-                        priority = GetSkillFloorPriority(pawn, workType.relevantSkills);
-                    }
-                    pawn.workSettings.SetPriority(workType, priority);
-                    if (priority <= 2) workCount[pawn]++;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 狩猎专用比较器：在通用三因子排序前增加「后排优先」判定。
-        /// 后排 = ArmorPreference.Flexible（Shooter/Hunter/Leader）。
-        /// 设计意图：后排角色应优先承担狩猎以练习射击能力。
-        /// 注：IsBackRow 结果由调用方预计算存入 backRowCache，避免比较器内重复调用 DetectRole。
-        /// </summary>
-        private static int ComparePawnsForHunting(Pawn a, Pawn b, List<SkillDef> skills)
-        {
-            // 后排优先（true 排前），查表替代重复 DetectRole 调用
-            bool backA = backRowCache.TryGetValue(a, out bool ba) && ba;
-            bool backB = backRowCache.TryGetValue(b, out bool bb) && bb;
-            if (backA != backB) return backB.CompareTo(backA);
-
-            // 其余因子复用通用比较
-            return ComparePawnsByPassionWorkCountSkill(a, b, skills);
+                GuaranteeCount = 2,
+                GuaranteePassionatePriority = 2,
+                GuaranteeNonPassionatePriority = 0,
+                FloorPassionatePriority = 3,
+                UseSkillFloorForNonPassionate = false,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = false,
+                UseBackRowSort = false
+            };
+            if (cachedGrowingDef != null)
+                AssignWorkType(cachedGrowingDef, growingConfig);
         }
 
         // ════════════════════════════════════════════════════════════
         // 第 4 遍：研究
-        //   - 候选排序：passion desc → skill desc → workCount asc
-        //   - guarantee 1：top 1 → priority=2，计入 workCount
-        //   - 其余 → priority=0（禁用，不备选）
+        //   保证 1 人，top1→2，有火保底 4，无火技能兜底
         // ════════════════════════════════════════════════════════════
 
         private static void AssignResearchPriorities()
         {
             if (cachedResearchDef == null) return;
-            WorkTypeDef workType = cachedResearchDef;
-
-            workCandidates.Clear();
-            for (int i = 0; i < candidatePawns.Count; i++)
+            WorkAllocationConfig config = new WorkAllocationConfig
             {
-                Pawn pawn = candidatePawns[i];
-                if (pawn.WorkTagIsDisabled(workType.workTags)) continue;
-                workCandidates.Add(pawn);
-            }
-            if (workCandidates.Count == 0) return;
-
-            // 排序：passion desc → skill desc → workCount asc
-            workCandidates.Sort((a, b) => ComparePawnsByPassionWorkCountSkill(a, b, workType.relevantSkills));
-
-            // guarantee 1：top 1 → priority=2，其余有兴趣 → priority=4（备选），其余无兴趣 → 技能兜底（≥8→3，否则 0）
-            for (int i = 0; i < workCandidates.Count; i++)
-            {
-                Pawn pawn = workCandidates[i];
-                int priority;
-                if (i < 1)
-                {
-                    priority = 2;
-                }
-                else if (HasPassionForAnySkill(pawn, workType.relevantSkills))
-                {
-                    priority = 4;
-                }
-                else
-                {
-                    priority = GetSkillFloorPriority(pawn, workType.relevantSkills);
-                }
-                pawn.workSettings.SetPriority(workType, priority);
-                if (priority <= 2) workCount[pawn]++;
-            }
+                GuaranteeCount = 1,
+                GuaranteePassionatePriority = 2,
+                GuaranteeNonPassionatePriority = 2,
+                FloorPassionatePriority = 4,
+                UseSkillFloorForNonPassionate = true,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = false,
+                UseBackRowSort = false
+            };
+            AssignWorkType(cachedResearchDef, config);
         }
 
         // ════════════════════════════════════════════════════════════
-        // 第 5 遍：其他技能工作（Cooking/Growing/Mining/Crafting 等）
-        //   - 候选排序：passion desc → skill desc → workCount asc
-        //   - guarantee 2：top 2 内有火 → priority=2，无火 → priority=3
-        //   - top 2 外的有火者优先承担（priority=3）
-        //   - 其余 → 技能兜底（≥8→3，否则 0）
+        // 第 5 遍：其他技能工作（Cooking/Mining/Crafting/Construction 等）
+        //   保证 2 人，有火 top2→2，无火 top2→3，有火保底 3，无火技能兜底
         // ════════════════════════════════════════════════════════════
 
         private static void AssignOtherSkillWorkPriorities()
         {
+            WorkAllocationConfig config = new WorkAllocationConfig
+            {
+                GuaranteeCount = 2,
+                GuaranteePassionatePriority = 2,
+                GuaranteeNonPassionatePriority = 3,
+                FloorPassionatePriority = 3,
+                UseSkillFloorForNonPassionate = true,
+                FloorNonPassionatePriority = 0,
+                RequireRangedWeapon = false,
+                UseBackRowSort = false
+            };
             for (int i = 0; i < otherSkillWorkDefs.Count; i++)
             {
-                AssignOtherSkillWorkType(otherSkillWorkDefs[i]);
-            }
-        }
-
-        private static void AssignOtherSkillWorkType(WorkTypeDef workType)
-        {
-            workCandidates.Clear();
-            for (int i = 0; i < candidatePawns.Count; i++)
-            {
-                Pawn pawn = candidatePawns[i];
-                if (pawn.WorkTagIsDisabled(workType.workTags)) continue;
-                workCandidates.Add(pawn);
-            }
-            if (workCandidates.Count == 0) return;
-
-            // 排序：passion desc → skill desc → workCount asc
-            workCandidates.Sort((a, b) => ComparePawnsByPassionWorkCountSkill(a, b, workType.relevantSkills));
-
-            // guarantee 2：top 2 内有火 → priority=2，无火 → priority=3；其余 → 技能兜底（≥8→3，否则 0）
-            // 设计意图：至少 2 人承担专业工作，有火者优先承担（priority=2 计入 workCount）；
-            // top 2 外的高技能者（≥8）也保留 priority=3 备选，避免高技能奴隶/殖民者被排除在工作外
-            for (int i = 0; i < workCandidates.Count; i++)
-            {
-                Pawn pawn = workCandidates[i];
-                int priority;
-                if (i < 2)
-                {
-                    priority = HasPassionForAnySkill(pawn, workType.relevantSkills) ? 2 : 3;
-                }
-                else
-                {
-                    // top 2 外的有火者优先承担（priority=3）
-                    if (HasPassionForAnySkill(pawn, workType.relevantSkills))
-                    {
-                        priority = 3;
-                    }
-                    // top 2 外的无火者技能兜底（≥8→3，否则 0）
-                    else
-                    {
-                        priority = GetSkillFloorPriority(pawn, workType.relevantSkills);
-                    }
-                }
-                pawn.workSettings.SetPriority(workType, priority);
-                if (priority <= 2) workCount[pawn]++;
+                AssignWorkType(otherSkillWorkDefs[i], config);
             }
         }
 
         // ════════════════════════════════════════════════════════════
         // 第 6 遍：搬运/清洁（按 CombatTier 分档，不计入 workCount）
-        //   S=4, A/B/C=3, D/X=1
+        //   SSS/SS/S=4, A/B/C=3, D/X=1
         // ════════════════════════════════════════════════════════════
 
         private static void AssignHaulingCleaningPriorities()
@@ -473,6 +388,95 @@ namespace AutoEverything.AutoWork
                     pawn.workSettings.SetPriority(wt, 3);
                 }
             }
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // 统一分配方法：按 WorkAllocationConfig 四大原则分配工作优先级
+        // ════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// 统一工作优先级分配方法，按 config 四大原则执行：
+        /// 1. 保证 GuaranteeCount 人承担（top N 内有火/无火分别给 GuaranteePassionate/GuaranteeNonPassionate）
+        /// 2. 三因子排序选 guarantee 人选（passion desc → skill desc → workCount asc）
+        /// 3. 超出 guarantee 的有火者给 FloorPassionatePriority 保底优先级
+        /// 4. 超出 guarantee 的无火者：UseSkillFloorForNonPassionate=true 时按技能兜底（≥12→2, ≥8→3, 否则 0），
+        ///    false 时直接给 FloorNonPassionatePriority
+        /// </summary>
+        private static void AssignWorkType(WorkTypeDef workType, WorkAllocationConfig config)
+        {
+            workCandidates.Clear();
+            for (int i = 0; i < candidatePawns.Count; i++)
+            {
+                Pawn pawn = candidatePawns[i];
+                if (pawn.WorkTagIsDisabled(workType.workTags)) continue;
+                // 狩猎类需远程武器：避免无远程武器者被分配
+                if (config.RequireRangedWeapon && pawn.equipment?.Primary?.def.IsRangedWeapon != true) continue;
+                workCandidates.Add(pawn);
+            }
+            if (workCandidates.Count == 0) return;
+
+            // 排序：后排优先（仅狩猎类） → passion desc → skill desc → workCount asc
+            if (config.UseBackRowSort)
+            {
+                // 预计算 IsBackRow 缓存，避免 Sort 比较器内重复调用 DetectRole（性能优化）
+                backRowCache.Clear();
+                for (int i = 0; i < workCandidates.Count; i++)
+                {
+                    Pawn p = workCandidates[i];
+                    backRowCache[p] = RoleDetector.IsBackRow(RoleDetector.DetectRole(p));
+                }
+                workCandidates.Sort((a, b) => ComparePawnsForHunting(a, b, workType.relevantSkills));
+            }
+            else
+            {
+                workCandidates.Sort((a, b) => ComparePawnsByPassionWorkCountSkill(a, b, workType.relevantSkills));
+            }
+
+            // 按配置分配优先级
+            for (int i = 0; i < workCandidates.Count; i++)
+            {
+                Pawn pawn = workCandidates[i];
+                bool hasPassion = HasPassionForAnySkill(pawn, workType.relevantSkills);
+                int priority;
+
+                if (i < config.GuaranteeCount)
+                {
+                    // 原则 1+2：保证 N 人承担，有火/无火分别给优先级
+                    priority = hasPassion ? config.GuaranteePassionatePriority : config.GuaranteeNonPassionatePriority;
+                }
+                else if (hasPassion)
+                {
+                    // 原则 3：有火者保底优先级
+                    priority = config.FloorPassionatePriority;
+                }
+                else
+                {
+                    // 原则 4：无火者技能兜底或固定优先级
+                    priority = config.UseSkillFloorForNonPassionate
+                        ? GetSkillFloorPriority(pawn, workType.relevantSkills)
+                        : config.FloorNonPassionatePriority;
+                }
+
+                pawn.workSettings.SetPriority(workType, priority);
+                if (priority <= 2) workCount[pawn]++;
+            }
+        }
+
+        /// <summary>
+        /// 狩猎专用比较器：在通用三因子排序前增加「后排优先」判定。
+        /// 后排 = ArmorPreference.Flexible（Shooter/Hunter/Leader）。
+        /// 设计意图：后排角色应优先承担狩猎以练习射击能力。
+        /// 注：IsBackRow 结果由调用方预计算存入 backRowCache，避免比较器内重复调用 DetectRole。
+        /// </summary>
+        private static int ComparePawnsForHunting(Pawn a, Pawn b, List<SkillDef> skills)
+        {
+            // 后排优先（true 排前），查表替代重复 DetectRole 调用
+            bool backA = backRowCache.TryGetValue(a, out bool ba) && ba;
+            bool backB = backRowCache.TryGetValue(b, out bool bb) && bb;
+            if (backA != backB) return backB.CompareTo(backA);
+
+            // 其余因子复用通用比较
+            return ComparePawnsByPassionWorkCountSkill(a, b, skills);
         }
 
         // ════════════════════════════════════════════════════════════
@@ -544,11 +548,9 @@ namespace AutoEverything.AutoWork
         /// </summary>
         private static int GetSkillFloorPriority(Pawn pawn, List<SkillDef> skills)
         {
-            // 技能等级兜底：相关技能最高等级 ≥ 12 时返回 2。
-            if (GetMaxSkillLevelForSkills(pawn, skills) >= 12) return 2;
-
-            // 技能等级兜底：相关技能最高等级 ≥ 8 时返回 3，否则返回 0。
-            return GetMaxSkillLevelForSkills(pawn, skills) >= 8 ? 3 : 0;
+            int maxLevel = GetMaxSkillLevelForSkills(pawn, skills);
+            if (maxLevel >= 12) return 2;
+            return maxLevel >= 8 ? 3 : 0;
         }
 
         /// <summary>

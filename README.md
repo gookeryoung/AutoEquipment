@@ -431,26 +431,41 @@
 ## 自动工作分配（AutoWork）
 
 `AutoWork/WorkAllocator.cs` 提供多遍协调分配 + 工作计数跟踪的工作优先级自动分配。
-将工作分为 7 类，按固定顺序分配，前排分配结果影响后排候选排序（通过工作计数实现均衡负载）。
+所有技能类工作复用统一 `AssignWorkType` + `WorkAllocationConfig` 四大原则分配，将工作分为 7 类按固定顺序分配，前排分配结果影响后排候选排序（通过工作计数实现均衡负载）。
+
+### 统一四大原则
+
+所有技能类工作（关键/狩猎类/研究/普通技能）共用统一分配 API，配置由 `WorkAllocationConfig` 结构编码：
+
+1. **保证数量**：`GuaranteeCount` 确保至少 N 人承担（无论有无火），top N 内有火给 `GuaranteePassionatePriority`、无火给 `GuaranteeNonPassionatePriority`
+2. **三因子排序**：top N 人选按 Passion 降序 → SkillLevel 降序 → WorkCount 升序选择，保证数量内选兴趣最高、技能最强的
+3. **有火保底**：超出 guarantee 的有火者至少给 `FloorPassionatePriority`（如 3），保留生产能力
+4. **无火技能兜底**：超出 guarantee 的无火者，`UseSkillFloorForNonPassionate=true` 时按技能等级兜底（≥12→2, ≥8→3, 否则 0）；`=false` 时直接给 `FloorNonPassionatePriority`
 
 ### 分配规则
 
 工作类型按以下分类与顺序分配（顺序影响工作计数，前排分配结果影响后排候选）：
 
-| 顺序 | 工作分类 | 包含类型 | 分配规则 | Others |
-|------|---------|---------|---------|--------|
-| 1 | 紧急 | Firefighter / Patient / PatientBedRest | 全部 → 1 | — |
-| 2 | 关键 | Doctor / Warden / Childcare | 所有候选按是否有火分配：有火 → 1（计入工作计数）；无火 → 3 | — |
-| 3 | 狩猎 | Hunting | 候选需装备远程武器；候选排序：后排优先 → 兴趣降序 → 技能降序 → 工作计数升序；top 2 → 2；计入工作计数 | 有兴趣 → 4；无兴趣 → 技能兜底 |
-| 3 | 钓鱼 | Fishing | 候选需装备远程武器；排序同狩猎；top 2 → 3；不计入工作计数 | 其余 → 技能兜底 |
-| 4 | 研究 | Research | 保证 1 人：排序同上（无后排优先）；top 1 → 2；计入工作计数 | 有兴趣 → 4；无兴趣 → 技能兜底 |
-| 5 | 普通技能 | Cooking / Growing / Mining / Crafting / Smithing / Tailoring / Art / Construction / PlantCutting / Handling | 保证 2 人：排序同上；top 2 内有火 → 2（计入工作计数），无火 → 3 | 其余 → 技能兜底 |
-| 6 | 杂务 | Hauling / Cleaning | 搬运：SSS/SS/S 档 = 4，A/B/C 档 = 3，D/X 档 = 1；清洁：同搬运 | — |
-| 7 | 非技能 | BasicWorker 等 | 全部 → 3 | — |
+| 顺序 | 工作分类 | 包含类型 | 保证人数 | top N 有火 | top N 无火 | 有火保底 | 无火兜底 | 特殊约束 |
+|------|---------|---------|---------|-----------|-----------|---------|---------|---------|
+| 1 | 紧急 | Firefighter / Patient / PatientBedRest | — | 全部 → 1 | 全部 → 1 | — | — | 不计入 workCount |
+| 2 | 关键 | Doctor / Warden / Childcare | 2 | 1 | 3 | 3 | 技能兜底 | — |
+| 3 | 狩猎 | Hunting | 2 | 2 | 2 | 4 | 技能兜底 | 需远程武器 + 后排排序 |
+| 3 | 钓鱼 | Fishing | 2 | 3 | 3 | 3 | 技能兜底 | 需远程武器 + 后排排序 |
+| 3 | 割除 | PlantCutting | 2 | 1 | 0 | 3 | 0 | — |
+| 3 | 种植 | Growing | 2 | 2 | 0 | 3 | 0 | — |
+| 4 | 研究 | Research | 1 | 2 | 2 | 4 | 技能兜底 | — |
+| 5 | 普通技能 | Cooking / Mining / Crafting / Smithing / Tailoring / Art / Construction / Handling 等 | 2 | 2 | 3 | 3 | 技能兜底 | — |
+| 6 | 杂务 | Hauling / Cleaning | — | 按评级：SSS/SS/S=4, A/B/C=3, D/X=1 | 同左 | — | — | 不计入 workCount |
+| 7 | 非技能 | BasicWorker 等 | — | 全部 → 3 | 全部 → 3 | — | — | 不计入 workCount |
 
-**技能等级兜底（全局规则）**：任何技能工作的候选，若相关技能最高等级 ≥ 8，即使无火也至少分配 priority=3（不计入工作计数）。设计意图：高技能者即使无兴趣也应保留生产能力，避免高技能奴隶/殖民者被排除在工作外。该规则适用于 Hunting / Fishing / Research / 普通技能工作的 Others 分支。
+**top N 有火/无火**：保证人数内按三因子排序选取，有火者给"top N 有火"优先级，无火者给"top N 无火"优先级。
 
-**Others 优先级规则**：保证数量外的「有兴趣但技能等级更低」者 → 4（备选，会在主力没空时补位）；保证数量外的「无兴趣」者 → 技能兜底（≥8→3，否则 0）。设计意图：有兴趣者可作为备选保留生产能力；高技能无火者也保留备选；低技能无火者不应承担该工作避免低效产出与心情惩罚。该规则仅适用于 Hunting 与 Research；关键工作、钓鱼、普通技能工作按表内规则统一分配。
+**有火保底**：超出保证人数的有火者至少给此优先级（原则 3），确保有兴趣者保留生产能力。
+
+**无火兜底**：超出保证人数的无火者，"技能兜底"表示按相关技能最高等级判定（≥12→2, ≥8→3, 否则 0，原则 4）；"0"表示直接禁用。
+
+**割除/种植特殊处理**：无火者（含 top N 内）一律 priority=0，仅在有足够有火者时才分配。设计意图：割除/种植无兴趣者效率极低且影响心情，不强制承担。
 
 **工作计数**：跟踪每 Pawn 的 priority ≤ 2 的专业工作数量（紧急/搬运/清洁/非技能不计入）。
 用于「同等兴趣下优先安排其他工作少的」实现均衡负载。
@@ -746,7 +761,7 @@ make rebuild-check  # 完整重建后检查
 | `GlobalAllocator.cs` / `Dialog_GlobalReallocate.cs` | `## 全局重配` 与 `### 保护规则` |
 | `GlobalAllocator.cs` 护甲匹配奖励 | `### 护甲分配算法（重甲单位优先）` 表格 |
 | `AutoExecutor.cs` | `## 自动执行（AutoExecutor）` + `### 评估周期` 表格 |
-| `WorkAllocator.cs` 奴隶收集/狩猎限制 | `## 奴隶处理` + `## 自动工作分配（AutoWork）` 狩猎条目 |
+| `WorkAllocator.cs` 奴隶收集/狩猎限制/工作分配规则 | `## 奴隶处理` + `## 自动工作分配（AutoWork）` 分配规则表格与统一四大原则 |
 | `PawnMarker.cs` / `AutoMarkPawn` 模块 | `### 高价值非殖民者标记（AutoMarkPawn）` |
 | `ITab_GearManager.cs` 底部勾选框 | `## 自动执行（AutoExecutor）` 入口章节 |
 | `SGSettings.cs` 排序相关 | `### 殖民者栏默认排序` 表格 |
