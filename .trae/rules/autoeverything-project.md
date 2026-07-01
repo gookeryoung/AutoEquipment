@@ -6,26 +6,34 @@
 ## 项目标识
 
 - MOD 名: `AutoEverything`
-- `packageId`: `gookeryoung.autoeverything`（发布后不可改）
-- Harmony ID: `gookeryoung.autoeverything`（与 packageId 一致，整个 MOD 单一实例）
-- 日志前缀: `[AutoEverything]`
+- `packageId/HarmonyID`: `gookeryoung.autoeverything`
+- 日志前缀: `[AE]`
 - Scribe Key 前缀: `ae_`（如 `ae_locked`、`ae_customTierEntries`）
-- 设置界面显示名: `自动万物`（中英文统一，禁止用全大写 `AUTOEVERYTHING`）
+- 设置界面显示名: `自动万物`（中英文统一）
 
 ## 命名空间与文件夹结构
 
-命名空间必须与文件夹结构匹配（IDE0130 规则）：
+命名空间必须与文件夹结构匹配（IDE0130 规则），例如：
 
 - `Source/AutoEverything/Core/*` → `namespace AutoEverything.Core`
-- `Source/AutoEverything/RoleEvaluation/*` → `namespace AutoEverything.RoleEvaluation`
-- `Source/AutoEverything/AutoEquipment/*` → `namespace AutoEverything.AutoEquipment`
-- `Source/AutoEverything/AutoEquipment/Scoring/*` → `namespace AutoEverything.AutoEquipment.Scoring`
-- `Source/AutoEverything/AutoEquipment/Scoring/Weapon/*` → `namespace AutoEverything.AutoEquipment.Scoring.Weapon`
-- `Source/AutoEverything/AutoEquipment/Scoring/Apparels/*` → `namespace AutoEverything.AutoEquipment.Scoring.Apparels`
-- `Source/AutoEverything/Allocation/*` → `namespace AutoEverything.Allocation`
-- `Source/AutoEverything/AutoWork/*` → `namespace AutoEverything.AutoWork`
-- `Source/AutoEverything/AutoMarkPawn/*` → `namespace AutoEverything.AutoMarkPawn`
 - `Source/AutoEverything/UI/*` → `namespace AutoEverything.UI`
+
+## 文档语言
+
+- README.md 与规则文件均以中文为主语言
+- 公式、字段名、类名保留英文原文
+- 玩家可见的说明必须可读，禁止纯技术黑话
+
+## 术语对齐
+
+- 单火 = `Passion.Minor`（单火焰图标）
+- 双火 = `Passion.Major`（双火焰图标）
+- 有火 = Minor 或 Major（任一兴趣）
+- 工作狂 = 勤奋 `Industriousness degree=2`
+- 工作狂+严重神经质 = **AND**（同时拥有两者，缺一不可）
+- 格斗者 = `TraitDefOf.Brawler`（原生特质）
+- 敏捷 = `Nimble` 特质（已有 `nimbleDef`）
+- 负面特质：脑子慢 SlowLearner / 纵火狂 Pyromaniac / 脆弱 Wimp / 工作懒惰或怠惰 Industriousness degree=-1/-2
 
 ### 模块职责
 
@@ -43,17 +51,25 @@
 
 ## 核心设计原则
 
-### 食尸鬼排除
+## 计算规则（关键）
 
-- 食尸鬼（`DLCCompat.IsGhoul`）即使种族是 Humanlike 也必须排除在所有装备管理外
-- `ContextDetector.GetContext` 中食尸鬼直接返回 `Normal`，避免 CurJob 误判为 Work
-- ITab 显示时食尸鬼情境徽章显示"闲置"（`AE_Context_Idle`）而非"日常"
-- 食尸鬼仍显示 ITab 与评级信息供玩家参考，但不参与自动万物分配
+### 殖民者评级
 
-### 不适用 Pawn 兜底
+- 评级分为 SSS/SS/S/A/B/C/D/X档
+- 按三大维度（乱开枪系列 / 坚韧格斗系列 / 工作狂神经质系列）细分判定
+- 坚韧+格斗单火=S, 坚韧+格斗双火=SS, 坚韧+格斗双火+敏捷/格斗者=SSS
+- 乱开枪+射击单火=S, 乱开枪+射击双火=SS, 乱开枪+射击双火+坚韧=SSS
+- 工作狂/严重神经质+两项专业双火=S,工作狂/严重神经质+三项专业双火=SS, 工作狂+严重神经质+手工双火=SSS
+- 沉鱼落雁+社交双火=S, 沉鱼落雁+社交双火+坚韧=SSS
+- 存在负面特质降低一档
+- A：≥2 双火 + ≥1单火, B：≥1 双火 + ≥2单火, C：其他, X: 禁止暴力
 
-- `CompTick` 开头必须 `CanManageGear` 检查，不适用时 `parent.AllComps.Remove(this)` 自移除
-- 覆盖场景：旧存档已注入异常 Comp、其他 mod 冲突、玩家控制机械族（Mechinator DLC）
+### 战斗价值评级
+
+- 战斗价值 = (射击×兴趣乘数 + 近战×兴趣乘数)，兴趣乘数：无火 1.0/单火 1.5/双火 2.0
+- 自定义评级识别码格式 `档次#人员名`（如 `S#王五`），存于 `SGSettings.customTierEntries`
+- `tierTagOriginals` 持久化到存档，避免重启后误剥离玩家手动改的 Nick
+- 腰带附件分配：纯近战 Pawn 优先护盾腰带（+100）> 消防背包（+60）, 其他 Pawn 优先消防背包（+100）> 护盾腰带（+60）
 
 ## 调试系统
 
@@ -65,15 +81,11 @@
 ## 全局分配系统
 
 - 全局重配按钮触发 `GlobalAllocator.ReallocateAll`
-- 战斗价值 = (射击×兴趣乘数 + 近战×兴趣乘数)，兴趣乘数：无火 1.0/单火 1.5/双火 2.0
-- 自定义评级识别码格式 `档次#人员名`（如 `S#王五`），存于 `SGSettings.customTierEntries`
-- `tierTagOriginals` 持久化到存档，避免重启后误剥离玩家手动改的 Nick
-- 腰带附件分配：纯近战 Pawn 优先护盾腰带（+100）> 消防背包（+60）
 
 ## 同步计算规则（强制）
 
-> 评分模型、权重、计算公式是面向玩家的契约，**修改代码必须同步更新文档**。
-> 文档与代码不一致视为"未完成"，禁止提交。
+> 评分模型、权重、计算公式是面向玩家的契约，**修改代码必须同步更新文档**
+> 文档与代码不一致视为"未完成"，禁止提交
 
 ### 必须同步 README.md 的变更类型
 
@@ -119,27 +131,8 @@
 
 提交前自检：
 
-- [ ] 改了 `GearWeights.cs`？→ README `权重预设方案` 表格已更新
-- [ ] 改了 `ScoringPipelineFactory.cs`？→ README 管线表格已更新
-- [ ] 改了任一 Scorer 的加分公式？→ README 对应行说明已更新
-- [ ] 改了 `PawnRole.cs`？→ README 角色表格已更新
-- [ ] 改了 `GearContext.cs`？→ README 情境表格已更新
-- [ ] 改了 `SidearmAllocator.cs`？→ README 副武器章节已更新
-- [ ] 改了 Tick 周期？→ README `评估周期` 表格已更新
-- [ ] 改了 Brawler Veto/双修偏好/EMP 副武器/贴身切换？→ README `主武器选择规则` 表格已更新
-- [ ] 改了 `BeltAllocator.cs`？→ README `腰带附件全局分配` 章节已更新
-- [ ] 改了 `GetArmorPreference`？→ README `护甲偏好` 表格已更新
-- [ ] 改了 `AutoExecutor.cs`？→ README `自动执行` 章节 + `评估周期` 表格已更新
-- [ ] 改了 ITab 底部勾选框（人员自动评级/工作自动配置/装备自动重配/高价值星标）？→ README `全局人物评级标签` + `自动工作分配` + `装备自动重配` + `高价值殖民者星标` 入口章节已更新
-- [ ] 改了 `PawnMarker.cs` / `AutoMarkPawn` 模块？→ README `高价值殖民者星标` 章节已更新
 - [ ] `make check` 通过
 - [ ] 调用 `uvx --from pyflowx gitt a`, `uvx --from pyflowx pymake p` 提交代码
-
-## 文档语言
-
-- README.md 与规则文件均以中文为主语言
-- 公式、字段名、类名保留英文原文
-- 玩家可见的说明必须可读，禁止纯技术黑话
 
 ## UI 资源加载
 
